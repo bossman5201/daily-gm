@@ -1,7 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
-import { sdk } from '@farcaster/miniapp-sdk';
+import { useEffect, useCallback } from 'react';
 import { GMButton } from './components/GMButton';
 import { Header } from './components/Header';
 import { LiveFeed } from './components/LiveFeed';
@@ -11,9 +10,18 @@ import { AdminPanel } from './components/AdminPanel';
 
 export default function Home() {
   // Signal to the Base App that the mini app is ready
-  useEffect(() => {
-    sdk.actions.ready();
+  const initMiniApp = useCallback(async () => {
+    try {
+      const { sdk } = await import('@farcaster/miniapp-sdk');
+      sdk.actions.ready({ disableNativeGestures: true });
+    } catch (err) {
+      // Not running inside a Mini App context — safe to ignore
+    }
   }, []);
+
+  useEffect(() => {
+    initMiniApp();
+  }, [initMiniApp]);
 
   return (
     <main className="min-h-screen flex flex-col selection:bg-[#0052FF] selection:text-white overflow-x-hidden">
