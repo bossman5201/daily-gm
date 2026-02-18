@@ -14,7 +14,7 @@ import {
     Identity,
     EthBalance,
 } from '@coinbase/onchainkit/identity';
-import { color } from '@coinbase/onchainkit/theme';
+
 
 export function Header() {
     return (
