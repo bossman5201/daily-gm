@@ -25,6 +25,7 @@ export async function GET() {
             ogTitle: 'Daily GM',
             ogDescription: 'Say GM on Base every day to build your streak.',
             ogImageUrl: `${URL}/splash.png`,
+            screenshotUrls: [`${URL}/screenshot1.png`],
             noindex: false,
         },
     });
