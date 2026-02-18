@@ -1,0 +1,118 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import "forge-std/Test.sol";
+import "../src/DailyGM.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
+
+contract DailyGMTest is Test {
+    DailyGM public dailyGM;
+    address public user1 = address(1);
+    address public owner = address(this);
+
+    function setUp() public {
+        dailyGM = new DailyGM();
+        // Label addresses for better traces
+        vm.label(user1, "User 1");
+    }
+
+    function testSetFees() public {
+        vm.prank(owner);
+        uint256 newFee = 0.00002 ether;
+        dailyGM.setFees(newFee, 0.001 ether);
+        
+        assertEq(dailyGM.protocolFee(), newFee);
+        assertEq(dailyGM.restoreFee(), 0.001 ether);
+    }
+
+    function testProtocolFee() public {
+        vm.deal(user1, 1 ether);
+        vm.prank(user1);
+        
+        vm.expectRevert("Insufficient fee");
+        dailyGM.gm{value: 0 ether}();
+    }
+
+    function testGMSuccess() public {
+        vm.deal(user1, 1 ether);
+        vm.prank(user1);
+
+        dailyGM.gm{value: 0.000025 ether}();
+        
+        assertEq(dailyGM.currentStreak(user1), 1);
+        assertEq(dailyGM.totalGMs(user1), 1);
+    }
+    
+    function testStreakReset() public {
+        vm.deal(user1, 1 ether);
+        vm.startPrank(user1);
+
+        // Day 1
+        dailyGM.gm{value: 0.000025 ether}();
+        assertEq(dailyGM.currentStreak(user1), 1);
+        
+        // Day 2 (Flexible window: 21h later is OK)
+        vm.warp(block.timestamp + 21 hours);
+        dailyGM.gm{value: 0.000025 ether}();
+        assertEq(dailyGM.currentStreak(user1), 2);
+
+        // Fast forward 49 hours from last GM (missed the window)
+        vm.warp(block.timestamp + 49 hours);
+        
+        // Trying to GM again, should reset streak
+        dailyGM.gm{value: 0.000025 ether}();
+        assertEq(dailyGM.currentStreak(user1), 1); // Reset to 1
+        assertEq(dailyGM.brokenStreak(user1), 2); // Tracked broken streak
+        
+        vm.stopPrank();
+    }
+
+    function testPause() public {
+        dailyGM.pause();
+        
+        vm.deal(user1, 1 ether);
+        vm.prank(user1);
+        
+        vm.expectRevert(Pausable.EnforcedPause.selector);
+        dailyGM.gm{value: 0.000025 ether}();
+        
+        dailyGM.unpause();
+        
+        vm.prank(user1);
+        dailyGM.gm{value: 0.000025 ether}();
+        assertEq(dailyGM.currentStreak(user1), 1);
+    }
+
+    function testZombieStreak() public {
+        vm.deal(user1, 1 ether);
+        vm.startPrank(user1);
+
+        // Build streak to 2
+        dailyGM.gm{value: 0.000025 ether}();
+        vm.warp(block.timestamp + 24 hours);
+        dailyGM.gm{value: 0.000025 ether}();
+        assertEq(dailyGM.currentStreak(user1), 2);
+
+        // Disappear for 30 days (Zombie Mode)
+        vm.warp(block.timestamp + 30 days);
+        
+        // Return and GM
+        dailyGM.gm{value: 0.000025 ether}();
+        
+        // Verification:
+        assertEq(dailyGM.currentStreak(user1), 1); // Reset to 1
+        assertEq(dailyGM.brokenStreak(user1), 0); // NO broken streak saved (Too late)
+
+        // Try to restore (should fail)
+        vm.expectRevert("No broken streak to restore");
+        dailyGM.restoreStreak{value: 0.0005 ether}();
+        
+        vm.stopPrank();
+    }
+
+    function testRenounceOwnership() public {
+        vm.prank(owner);
+        vm.expectRevert("Renouncing ownership is disabled");
+        dailyGM.renounceOwnership();
+    }
+}
