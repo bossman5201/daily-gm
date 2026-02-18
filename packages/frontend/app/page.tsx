@@ -31,11 +31,6 @@ export default function Home() {
 
           <GMButton />
 
-          <p className="text-sm text-center text-white/40 max-w-xs">
-            Protocol Fee: 0.000015 ETH
-            <br />
-            Maintain your streak (24-48h).
-          </p>
 
           <PersonalStats />
         </div>
