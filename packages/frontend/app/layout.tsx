@@ -13,6 +13,7 @@ export const metadata: Metadata = {
   title: "Daily GM",
   description: "Say GM on Base every day to build your streak.",
   other: {
+    'base:app_id': '6994873ce0d5d2cf831b5f0c',
     'fc:miniapp': JSON.stringify({
       version: 'next',
       imageUrl: `${APP_URL}/splash.png`,
