@@ -7,9 +7,27 @@ import { Toaster } from 'sonner';
 
 const inter = Inter({ subsets: ["latin"] });
 
+const APP_URL = process.env.NEXT_PUBLIC_URL || 'https://daily-gm-zeta.vercel.app';
+
 export const metadata: Metadata = {
   title: "Daily GM",
   description: "Say GM on Base every day to build your streak.",
+  other: {
+    'fc:miniapp': JSON.stringify({
+      version: 'next',
+      imageUrl: `${APP_URL}/splash.png`,
+      button: {
+        title: 'Say GM ☀️',
+        action: {
+          type: 'launch_miniapp',
+          name: 'Daily GM',
+          url: APP_URL,
+          splashImageUrl: `${APP_URL}/splash.png`,
+          splashBackgroundColor: '#000000',
+        },
+      },
+    }),
+  },
 };
 
 export default function RootLayout({

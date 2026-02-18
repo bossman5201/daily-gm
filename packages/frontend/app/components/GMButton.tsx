@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useAccount, useSendTransaction, useWaitForTransactionReceipt, useReadContract, type BaseError } from 'wagmi';
 import { parseEther, encodeFunctionData } from 'viem';
-import { appendBuilderCode } from '../../lib/builderCode';
+
 import { playSound } from '../../lib/audio';
 import { Button } from '@/components/ui/button';
 import { Loader2, Timer } from 'lucide-react';
@@ -111,14 +111,11 @@ export function GMButton() {
             functionName: 'gm'
         });
 
-        // 2. Append the Builder Code (for Base rewards)
-        const txData = appendBuilderCode(data);
-
-        // 3. Send the transaction
+        // 2. Send the transaction (Builder Code auto-appended via wagmi dataSuffix)
         sendTransaction({
             to: CONTRACT_ADDRESS,
             value: parseEther('0.000025'),
-            data: txData
+            data: data
         });
     };
 
