@@ -5,11 +5,13 @@ import { createPublicClient, http, parseAbiItem, Log } from 'viem';
 import { base, baseSepolia } from 'viem/chains';
 import { CONTRACT_ADDRESS } from '../../../config/contracts';
 
-// Initialize Supabase (Service Role for write access)
-const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Helper to get Supabase Admin client
+const getSupabaseAdmin = () => {
+    return createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
+        process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder-key'
+    );
+};
 
 // Initialize Viem Client
 const client = createPublicClient({
@@ -29,6 +31,8 @@ export async function GET(request: Request) {
     }
 
     try {
+        const supabase = getSupabaseAdmin();
+
         // 2. Get last indexed block from DB
         const { data: lastEvent } = await supabase
             .from('gm_events')
