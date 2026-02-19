@@ -73,7 +73,18 @@ export function PersonalStats() {
         }
     });
 
-    // ...
+    const { isLoading: isConfirming, isSuccess: isConfirmed, error: receiptError } = useWaitForTransactionReceipt({
+        hash,
+    });
+
+    React.useEffect(() => {
+        if (isConfirmed) {
+            refetch();
+            toast.success('Streak Restored! 🛡️', {
+                description: 'Your streak has been saved.',
+            });
+        }
+    }, [isConfirmed, refetch]);
 
     const handleRestore = () => {
         writeContract({

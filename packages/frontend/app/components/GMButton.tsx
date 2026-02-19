@@ -28,7 +28,81 @@ export function GMButton() {
         }
     });
 
-    // ...
+    const { switchChain } = useSwitchChain();
+    const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
+        hash,
+    });
+
+    const controls = useAnimation();
+
+    // Read the protocol fee from contract
+    const { data: protocolFee } = useReadContract({
+        address: CONTRACT_ADDRESS,
+        abi: DAILY_GM_ABI,
+        functionName: 'protocolFee',
+    });
+
+    // Read the last GM time for this user
+    const { data: lastGMTime, refetch } = useReadContract({
+        address: CONTRACT_ADDRESS,
+        abi: DAILY_GM_ABI,
+        functionName: 'lastGMTime',
+        args: [address as `0x${string}`],
+        query: {
+            enabled: !!address,
+        }
+    });
+
+    const [timeLeft, setTimeLeft] = React.useState<string | null>(null);
+
+    React.useEffect(() => {
+        if (!lastGMTime) {
+            setTimeLeft(null);
+            return;
+        }
+
+        const interval = setInterval(() => {
+            const now = Math.floor(Date.now() / 1000);
+            const lastTime = Number(lastGMTime);
+
+            // If lastTime is 0, they haven't GM'd yet
+            if (lastTime === 0) {
+                setTimeLeft(null);
+                return;
+            }
+
+            const nextGM = lastTime + (20 * 60 * 60); // Match contract's 20h cooldown
+            const diff = nextGM - now;
+
+            if (diff <= 0) {
+                setTimeLeft(null);
+            } else {
+                const h = Math.floor(diff / 3600);
+                const m = Math.floor((diff % 3600) / 60);
+                const s = diff % 60;
+                setTimeLeft(`${h}h ${m}m ${s}s`);
+            }
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, [lastGMTime]);
+
+    React.useEffect(() => {
+        if (isSuccess) {
+            refetch(); // Update lastGMTime immediately after success
+            import('canvas-confetti').then((confetti) => {
+                confetti.default({
+                    particleCount: 150,
+                    spread: 70,
+                    origin: { y: 0.6 },
+                    colors: ['#0052FF', '#FFFFFF', '#000000'] // Base Brand Colors
+                });
+            });
+            playSound('success');
+        }
+    }, [isSuccess, refetch]);
+
+    const isWrongChain = isConnected && chainId !== base.id;
 
     const handleGM = () => {
         if (isWrongChain) {
