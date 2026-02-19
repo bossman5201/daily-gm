@@ -18,6 +18,9 @@ contract DailyGM is Ownable, ReentrancyGuard, Pausable {
     // 0.0005 ETH (~$1.50) streak restore fee
     uint256 public restoreFee = 0.0005 ether;
 
+    // Global stats
+    uint256 public totalGMCount;
+
     event GM(address indexed user, uint256 streak, uint256 timestamp);
     event StreakRestored(address indexed user, uint256 streak, uint256 timestamp);
     event FeesUpdated(uint256 newProtocolFee, uint256 newRestoreFee);
@@ -26,7 +29,7 @@ contract DailyGM is Ownable, ReentrancyGuard, Pausable {
 
     function gm() external payable nonReentrant whenNotPaused {
         // Check protocol fee
-        require(msg.value >= protocolFee, "Insufficient fee");
+        require(msg.value == protocolFee, "Incorrect fee");
 
         uint256 lastTime = lastGMTime[msg.sender];
         uint256 currentTime = block.timestamp;
@@ -58,6 +61,7 @@ contract DailyGM is Ownable, ReentrancyGuard, Pausable {
 
         // Update stats
         totalGMs[msg.sender] += 1;
+        totalGMCount += 1;
         if (currentStreak[msg.sender] > longestStreak[msg.sender]) {
             longestStreak[msg.sender] = currentStreak[msg.sender];
         }
@@ -68,7 +72,7 @@ contract DailyGM is Ownable, ReentrancyGuard, Pausable {
     }
 
     function restoreStreak() external payable nonReentrant whenNotPaused {
-        require(msg.value >= restoreFee, "Insufficient fee");
+        require(msg.value == restoreFee, "Incorrect fee");
         require(brokenStreak[msg.sender] > 0, "No broken streak to restore");
 
         // Logic: Restore the streak
@@ -97,10 +101,15 @@ contract DailyGM is Ownable, ReentrancyGuard, Pausable {
     }
 
     function withdraw() external onlyOwner nonReentrant {
-        payable(owner()).transfer(address(this).balance);
+        uint256 balance = address(this).balance;
+        require(balance > 0, "No funds to withdraw");
+        (bool success, ) = payable(owner()).call{value: balance}("");
+        require(success, "Withdraw failed");
     }
 
     function setFees(uint256 _protocolFee, uint256 _restoreFee) external onlyOwner {
+        require(_protocolFee <= 0.01 ether, "Protocol fee too high");
+        require(_restoreFee <= 0.05 ether, "Restore fee too high");
         protocolFee = _protocolFee;
         restoreFee = _restoreFee;
         emit FeesUpdated(_protocolFee, _restoreFee);

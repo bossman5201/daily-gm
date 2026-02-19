@@ -6,6 +6,7 @@ import { Header } from './components/Header';
 import { LiveFeed } from './components/LiveFeed';
 import { Leaderboard } from './components/Leaderboard';
 import { PersonalStats } from './components/PersonalStats';
+import { GlobalStats } from './components/GlobalStats';
 import { AdminPanel } from './components/AdminPanel';
 
 export default function Home() {
@@ -42,6 +43,9 @@ export default function Home() {
 
           <PersonalStats />
         </div>
+
+        {/* Global Counter */}
+        <GlobalStats />
 
         {/* Live Data */}
         <div className="w-full max-w-md grid grid-cols-1 md:grid-cols-2 gap-8">

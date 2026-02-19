@@ -2,23 +2,9 @@
 
 import * as React from 'react';
 import { useWatchContractEvent, usePublicClient } from 'wagmi';
-import { baseSepolia } from 'wagmi/chains';
+import { base } from 'wagmi/chains';
 import { type Log } from 'viem';
-
-// Ensure this matches the deployed contract address
-const CONTRACT_ADDRESS = "0xc807c3B44E801C38bb3460E35FCC67BA3B472D55";
-const GM_ABI = [
-    {
-        anonymous: false,
-        inputs: [
-            { indexed: true, internalType: "address", name: "user", type: "address" },
-            { indexed: false, internalType: "uint256", name: "streak", type: "uint256" },
-            { indexed: false, internalType: "uint256", name: "timestamp", type: "uint256" }
-        ],
-        name: "GM",
-        type: "event"
-    }
-] as const;
+import { CONTRACT_ADDRESS, DAILY_GM_ABI } from '../../config/contracts';
 
 interface GMEvent {
     user: string;
@@ -29,7 +15,7 @@ interface GMEvent {
 
 export function LiveFeed() {
     const [events, setEvents] = React.useState<GMEvent[]>([]);
-    const publicClient = usePublicClient({ chainId: baseSepolia.id });
+    const publicClient = usePublicClient({ chainId: base.id });
 
     // Initial fetch of logs
     React.useEffect(() => {
@@ -43,7 +29,7 @@ export function LiveFeed() {
 
                 const logs = await publicClient.getContractEvents({
                     address: CONTRACT_ADDRESS,
-                    abi: GM_ABI,
+                    abi: DAILY_GM_ABI,
                     eventName: 'GM',
                     fromBlock: fromBlock
                 });
@@ -71,9 +57,9 @@ export function LiveFeed() {
 
     useWatchContractEvent({
         address: CONTRACT_ADDRESS,
-        abi: GM_ABI,
+        abi: DAILY_GM_ABI,
         eventName: 'GM',
-        chainId: baseSepolia.id,
+        chainId: base.id,
         onLogs(logs) {
             const newEvents = logs.map((log) => {
                 const { args, transactionHash } = log as Log & { args: { user: string; streak: bigint; timestamp: bigint } };

@@ -22,7 +22,7 @@ export function Header() {
             <h1 className="text-2xl font-bold text-white tracking-tighter">
                 Daily <span className="text-[#0052FF]">GM</span>
             </h1>
-            <div className="flex gap-2">
+            <div className="flex flex-col items-end gap-1">
                 <Wallet>
                     <ConnectWallet className="bg-[#0052FF] text-white hover:bg-[#0040CB] rounded-full px-4 py-2 font-bold transition-all">
                         <Avatar className="h-6 w-6" />
@@ -41,6 +41,7 @@ export function Header() {
                         <WalletDropdownDisconnect />
                     </WalletDropdown>
                 </Wallet>
+                <span className="text-[10px] text-white/30 tracking-wide">Coinbase Wallet & Farcaster</span>
             </div>
         </header>
     );

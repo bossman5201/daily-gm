@@ -1,47 +1,38 @@
 'use client';
 
 import * as React from 'react';
-import { useAccount, useSendTransaction, useWaitForTransactionReceipt, useReadContract, type BaseError } from 'wagmi';
+import { useAccount, useSendTransaction, useWaitForTransactionReceipt, useReadContract, useSwitchChain, type BaseError } from 'wagmi';
 import { parseEther, encodeFunctionData } from 'viem';
+import { base } from 'wagmi/chains';
 
 import { playSound } from '../../lib/audio';
 import { Button } from '@/components/ui/button';
 import { Loader2, Timer } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, useAnimation } from "framer-motion";
-
-// Replace with deployed contract address
-const CONTRACT_ADDRESS = "0xc807c3B44E801C38bb3460E35FCC67BA3B472D55";
-const GM_ABI = [
-    {
-        inputs: [],
-        name: "gm",
-        outputs: [],
-        stateMutability: "payable",
-        type: "function"
-    },
-    {
-        inputs: [{ internalType: "address", name: "", type: "address" }],
-        name: "lastGMTime",
-        outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
-        stateMutability: "view",
-        type: "function"
-    }
-] as const;
+import { CONTRACT_ADDRESS, DAILY_GM_ABI } from '../../config/contracts';
 
 export function GMButton() {
-    const { address, isConnected } = useAccount();
+    const { address, isConnected, chainId } = useAccount();
     const { sendTransaction, data: hash, isPending, error } = useSendTransaction();
+    const { switchChain } = useSwitchChain();
     const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
         hash,
     });
 
     const controls = useAnimation();
 
+    // Read the protocol fee from contract
+    const { data: protocolFee } = useReadContract({
+        address: CONTRACT_ADDRESS,
+        abi: DAILY_GM_ABI,
+        functionName: 'protocolFee',
+    });
+
     // Read the last GM time for this user
     const { data: lastGMTime, refetch } = useReadContract({
         address: CONTRACT_ADDRESS,
-        abi: GM_ABI,
+        abi: DAILY_GM_ABI,
         functionName: 'lastGMTime',
         args: [address as `0x${string}`],
         query: {
@@ -67,7 +58,7 @@ export function GMButton() {
                 return;
             }
 
-            const nextGM = lastTime + (24 * 60 * 60);
+            const nextGM = lastTime + (20 * 60 * 60); // Match contract's 20h cooldown
             const diff = nextGM - now;
 
             if (diff <= 0) {
@@ -103,18 +94,24 @@ export function GMButton() {
         }
     }, [isSuccess, error]);
 
+    const isWrongChain = isConnected && chainId !== base.id;
+
     const handleGM = () => {
+        if (isWrongChain) {
+            switchChain({ chainId: base.id });
+            return;
+        }
         playSound('click');
         // 1. Encode the function call (gm())
         const data = encodeFunctionData({
-            abi: GM_ABI,
+            abi: DAILY_GM_ABI,
             functionName: 'gm'
         });
 
         // 2. Send the transaction (Builder Code auto-appended via wagmi dataSuffix)
         sendTransaction({
             to: CONTRACT_ADDRESS,
-            value: parseEther('0.000025'),
+            value: protocolFee ?? parseEther('0.000025'), // Read from contract, fallback to default
             data: data
         });
     };
@@ -146,13 +143,23 @@ export function GMButton() {
                     disabled={!isConnected || isPending || isConfirming || !!timeLeft}
                     className="group relative flex h-72 w-72 items-center justify-center rounded-full bg-gradient-to-br from-[#0052FF] to-[#0035A0] text-7xl font-black text-white transition-all duration-200 hover:scale-105 hover:shadow-[0_0_80px_-10px_#0052FF] active:scale-95 shadow-[0_0_40px_-10px_rgba(0,82,255,0.4)] ring-4 ring-white/5 backdrop-blur-sm disabled:opacity-80 disabled:cursor-not-allowed disabled:pointer-events-none"
                 >
-                    {isPending || isConfirming ? (
-                        <Loader2 className="h-24 w-24 animate-spin text-white/50" />
+                    {isPending ? (
+                        <div className="flex flex-col items-center gap-3">
+                            <Loader2 className="h-16 w-16 animate-spin text-white/50" />
+                            <span className="text-lg font-bold text-white/60">Signing...</span>
+                        </div>
+                    ) : isConfirming ? (
+                        <div className="flex flex-col items-center gap-3">
+                            <Loader2 className="h-16 w-16 animate-spin text-white/50" />
+                            <span className="text-lg font-bold text-white/60">Confirming...</span>
+                        </div>
                     ) : timeLeft ? (
                         <div className="flex flex-col items-center gap-2 animate-pulse">
                             <Timer className="h-10 w-10 text-white/70" />
                             <span className="text-xl font-mono tracking-widest">{timeLeft}</span>
                         </div>
+                    ) : isWrongChain ? (
+                        <span className="text-2xl">Switch to Base</span>
                     ) : (
                         "GM"
                     )}

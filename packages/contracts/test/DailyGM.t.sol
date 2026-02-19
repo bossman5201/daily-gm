@@ -29,7 +29,7 @@ contract DailyGMTest is Test {
         vm.deal(user1, 1 ether);
         vm.prank(user1);
         
-        vm.expectRevert("Insufficient fee");
+        vm.expectRevert("Incorrect fee");
         dailyGM.gm{value: 0 ether}();
     }
 

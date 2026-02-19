@@ -5,26 +5,7 @@ import { useAccount, useReadContract, useWriteContract, useWaitForTransactionRec
 import { formatEther } from 'viem';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
-
-// Replace with deployed contract address
-const CONTRACT_ADDRESS = "0xc807c3B44E801C38bb3460E35FCC67BA3B472D55";
-
-const ADMIN_ABI = [
-    {
-        inputs: [],
-        name: "withdraw",
-        outputs: [],
-        stateMutability: "nonpayable",
-        type: "function"
-    },
-    {
-        inputs: [],
-        name: "owner",
-        outputs: [{ internalType: "address", name: "", type: "address" }],
-        stateMutability: "view",
-        type: "function"
-    }
-] as const;
+import { CONTRACT_ADDRESS, DAILY_GM_ABI } from '../../config/contracts';
 
 export function AdminPanel() {
     const { address } = useAccount();
@@ -37,7 +18,7 @@ export function AdminPanel() {
     // Check if current user is owner
     const { data: ownerAddress, isError, error: readError } = useReadContract({
         address: CONTRACT_ADDRESS,
-        abi: ADMIN_ABI,
+        abi: DAILY_GM_ABI,
         functionName: 'owner',
     });
 
@@ -54,7 +35,7 @@ export function AdminPanel() {
     const handleWithdraw = () => {
         writeContract({
             address: CONTRACT_ADDRESS,
-            abi: ADMIN_ABI,
+            abi: DAILY_GM_ABI,
             functionName: 'withdraw',
         });
     };

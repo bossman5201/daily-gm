@@ -1,45 +1,12 @@
 'use client';
 
 import * as React from 'react';
-import { useAccount, useReadContracts, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { useAccount, useReadContracts, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { User, Flame, Hash, Shield } from 'lucide-react';
-import { parseEther } from 'viem';
+import { parseEther, formatEther } from 'viem';
 import { toast } from 'sonner';
 import { motion, useSpring, useTransform } from "framer-motion";
-
-// Replace with deployed contract address
-const CONTRACT_ADDRESS = "0xc807c3B44E801C38bb3460E35FCC67BA3B472D55";
-
-const STATS_ABI = [
-    {
-        inputs: [{ internalType: "address", name: "", type: "address" }],
-        name: "totalGMs",
-        outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
-        stateMutability: "view",
-        type: "function"
-    },
-    {
-        inputs: [{ internalType: "address", name: "", type: "address" }],
-        name: "longestStreak",
-        outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
-        stateMutability: "view",
-        type: "function"
-    },
-    {
-        inputs: [{ internalType: "address", name: "", type: "address" }],
-        name: "brokenStreak",
-        outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
-        stateMutability: "view",
-        type: "function"
-    },
-    {
-        inputs: [],
-        name: "restoreStreak",
-        outputs: [],
-        stateMutability: "payable",
-        type: "function"
-    }
-] as const;
+import { CONTRACT_ADDRESS, DAILY_GM_ABI } from '../../config/contracts';
 
 function NumberTicker({ value }: { value: number }) {
     const spring = useSpring(0, { bounce: 0, duration: 2000 });
@@ -64,19 +31,19 @@ export function PersonalStats() {
         contracts: [
             {
                 address: CONTRACT_ADDRESS,
-                abi: STATS_ABI,
+                abi: DAILY_GM_ABI,
                 functionName: 'totalGMs',
                 args: [address as `0x${string}`],
             },
             {
                 address: CONTRACT_ADDRESS,
-                abi: STATS_ABI,
+                abi: DAILY_GM_ABI,
                 functionName: 'longestStreak',
                 args: [address as `0x${string}`],
             },
             {
                 address: CONTRACT_ADDRESS,
-                abi: STATS_ABI,
+                abi: DAILY_GM_ABI,
                 functionName: 'brokenStreak',
                 args: [address as `0x${string}`],
             },
@@ -84,6 +51,13 @@ export function PersonalStats() {
         query: {
             enabled: !!address,
         }
+    });
+
+    // Read restore fee from contract
+    const { data: restoreFee } = useReadContract({
+        address: CONTRACT_ADDRESS,
+        abi: DAILY_GM_ABI,
+        functionName: 'restoreFee',
     });
 
     const { writeContract, data: hash, isPending: isWritePending, error: writeError } = useWriteContract();
@@ -109,9 +83,9 @@ export function PersonalStats() {
     const handleRestore = () => {
         writeContract({
             address: CONTRACT_ADDRESS,
-            abi: STATS_ABI,
+            abi: DAILY_GM_ABI,
             functionName: 'restoreStreak',
-            value: parseEther('0.0005'),
+            value: restoreFee ?? parseEther('0.0005'),
         });
     };
 
@@ -176,7 +150,7 @@ export function PersonalStats() {
                     <p className="text-sm text-red-200/70 mb-4">
                         You lost a streak of <span className="font-bold text-white">{brokenStreak} days</span>.
                         <br />
-                        Restore it now for 0.0005 ETH?
+                        Restore it now for {restoreFee ? formatEther(restoreFee) : '0.0005'} ETH?
                     </p>
                     <button
                         onClick={handleRestore}
@@ -186,7 +160,7 @@ export function PersonalStats() {
                         {isPending ? (
                             <>Restoring...</>
                         ) : (
-                            <>Restore Streak (0.0005 ETH)</>
+                            <>Restore Streak ({restoreFee ? formatEther(restoreFee) : '0.0005'} ETH)</>
                         )}
                     </button>
                     {isConfirmed && <p className="text-xs text-green-400 mt-2">Streak Restored!</p>}

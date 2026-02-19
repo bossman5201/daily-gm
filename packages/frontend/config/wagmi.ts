@@ -1,4 +1,4 @@
-import { http, createConfig } from 'wagmi';
+import { http, createConfig, fallback } from 'wagmi';
 import { base, baseSepolia } from 'wagmi/chains';
 import { coinbaseWallet } from 'wagmi/connectors';
 import { farcasterMiniApp } from '@farcaster/miniapp-wagmi-connector';
@@ -19,7 +19,12 @@ export const config = createConfig({
         }),
     ],
     transports: {
-        [base.id]: http(),
+        [base.id]: process.env.NEXT_PUBLIC_BASE_RPC_URL
+            ? fallback([
+                http(process.env.NEXT_PUBLIC_BASE_RPC_URL),
+                http(), // Public RPC backup
+            ])
+            : http(),
         [baseSepolia.id]: http(),
     },
     dataSuffix: DATA_SUFFIX,
