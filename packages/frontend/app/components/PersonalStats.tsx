@@ -7,6 +7,7 @@ import { parseEther, formatEther } from 'viem';
 import { toast } from 'sonner';
 import { motion, useSpring, useTransform } from "framer-motion";
 import { CONTRACT_ADDRESS, DAILY_GM_ABI } from '../../config/contracts';
+import { parseError } from '../../lib/error';
 
 function NumberTicker({ value }: { value: number }) {
     const spring = useSpring(0, { bounce: 0, duration: 2000 });
@@ -60,25 +61,19 @@ export function PersonalStats() {
         functionName: 'restoreFee',
     });
 
-    const { writeContract, data: hash, isPending: isWritePending, error: writeError } = useWriteContract();
-
-    const { isLoading: isConfirming, isSuccess: isConfirmed, error: receiptError } = useWaitForTransactionReceipt({
-        hash,
+    const { writeContract, data: hash, isPending: isWritePending } = useWriteContract({
+        mutation: {
+            onSuccess: () => {
+                toast.success("Restore tx sent! Waiting...");
+            },
+            onError: (error) => {
+                const cleanMessage = parseError(error);
+                toast.error(cleanMessage);
+            }
+        }
     });
 
-    React.useEffect(() => {
-        if (isConfirmed) {
-            refetch();
-            toast.success('Streak Restored! 🛡️', {
-                description: 'Your streak has been saved.',
-            });
-        }
-        if (writeError) {
-            toast.error('Restore Failed', {
-                description: writeError.message.split('\n')[0],
-            });
-        }
-    }, [isConfirmed, refetch, writeError]);
+    // ...
 
     const handleRestore = () => {
         writeContract({
