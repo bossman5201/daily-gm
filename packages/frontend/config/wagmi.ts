@@ -1,6 +1,6 @@
 import { http, createConfig, fallback } from 'wagmi';
 import { base, baseSepolia } from 'wagmi/chains';
-import { coinbaseWallet } from 'wagmi/connectors';
+import { coinbaseWallet, walletConnect } from 'wagmi/connectors';
 import { farcasterMiniApp } from '@farcaster/miniapp-wagmi-connector';
 import { Attribution } from 'ox/erc8021';
 
@@ -12,10 +12,14 @@ const DATA_SUFFIX = Attribution.toDataSuffix({
 export const config = createConfig({
     chains: [base, baseSepolia],
     connectors: [
-        farcasterMiniApp(),  // Primary: wallet inside Base App
+        farcasterMiniApp(),
         coinbaseWallet({
             appName: 'Daily GM',
-            preference: 'smartWalletOnly', // Fallback: standalone browser
+            preference: 'smartWalletOnly',
+        }),
+        walletConnect({
+            projectId: process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID || 'c04effc81414440057e93b6831d10e8d', // fallback safe key or empty
+            showQrModal: true,
         }),
     ],
     transports: {

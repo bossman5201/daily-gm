@@ -42,6 +42,19 @@ export default function RootLayout({
         <div className="aurora-bg" />
         <Providers>
           {children}
+
+          <footer className="relative z-10 w-full py-8 text-center text-[10px] text-white/20 space-y-2 pointer-events-auto">
+            <div className="flex justify-center gap-4 uppercase tracking-widest font-bold">
+              <a href="/terms" className="hover:text-white/50 transition-colors">Terms</a>
+              <a href="/privacy" className="hover:text-white/50 transition-colors">Privacy</a>
+            </div>
+            <p className="max-w-md mx-auto leading-relaxed px-4">
+              Not a lottery. No guaranteed prizes. Streak is a vanity metric only.
+              <br />
+              By using this app, you accept the risks of blockchain transactions.
+            </p>
+          </footer>
+
           <Toaster position="bottom-right" theme="dark" />
         </Providers>
       </body>
