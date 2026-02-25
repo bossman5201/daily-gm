@@ -29,8 +29,14 @@ contract DailyGMTest is Test {
         vm.deal(user1, 1 ether);
         vm.prank(user1);
         
-        vm.expectRevert("Incorrect fee");
-        dailyGM.gm{value: 0 ether}();
+        // Underpaying should fail
+        vm.expectRevert(DailyGM.IncorrectFee.selector);
+        dailyGM.gm{value: 0.000024 ether}();
+
+        // Overpaying should succeed (Mempool Griefing Fix)
+        vm.prank(user1);
+        dailyGM.gm{value: 0.000026 ether}();
+        assertEq(getCurrentStreak(user1), 1);
     }
 
     function testGMSuccess() public {
@@ -39,8 +45,8 @@ contract DailyGMTest is Test {
 
         dailyGM.gm{value: 0.000025 ether}();
         
-        assertEq(dailyGM.currentStreak(user1), 1);
-        assertEq(dailyGM.totalGMs(user1), 1);
+        assertEq(getCurrentStreak(user1), 1);
+        assertEq(getTotalGMs(user1), 1);
     }
     
     function testStreakReset() public {
@@ -49,20 +55,20 @@ contract DailyGMTest is Test {
 
         // Day 1
         dailyGM.gm{value: 0.000025 ether}();
-        assertEq(dailyGM.currentStreak(user1), 1);
+        assertEq(getCurrentStreak(user1), 1);
         
         // Day 2 (Flexible window: 21h later is OK)
         vm.warp(block.timestamp + 21 hours);
         dailyGM.gm{value: 0.000025 ether}();
-        assertEq(dailyGM.currentStreak(user1), 2);
+        assertEq(getCurrentStreak(user1), 2);
 
         // Fast forward 49 hours from last GM (missed the window)
         vm.warp(block.timestamp + 49 hours);
         
         // Trying to GM again, should reset streak
         dailyGM.gm{value: 0.000025 ether}();
-        assertEq(dailyGM.currentStreak(user1), 1); // Reset to 1
-        assertEq(dailyGM.brokenStreak(user1), 2); // Tracked broken streak
+        assertEq(getCurrentStreak(user1), 1); // Reset to 1
+        assertEq(getBrokenStreak(user1), 2); // Tracked broken streak
         
         vm.stopPrank();
     }
@@ -80,7 +86,7 @@ contract DailyGMTest is Test {
         
         vm.prank(user1);
         dailyGM.gm{value: 0.000025 ether}();
-        assertEq(dailyGM.currentStreak(user1), 1);
+        assertEq(getCurrentStreak(user1), 1);
     }
 
     function testZombieStreak() public {
@@ -91,7 +97,7 @@ contract DailyGMTest is Test {
         dailyGM.gm{value: 0.000025 ether}();
         vm.warp(block.timestamp + 24 hours);
         dailyGM.gm{value: 0.000025 ether}();
-        assertEq(dailyGM.currentStreak(user1), 2);
+        assertEq(getCurrentStreak(user1), 2);
 
         // Disappear for 30 days (Zombie Mode)
         vm.warp(block.timestamp + 30 days);
@@ -100,11 +106,11 @@ contract DailyGMTest is Test {
         dailyGM.gm{value: 0.000025 ether}();
         
         // Verification:
-        assertEq(dailyGM.currentStreak(user1), 1); // Reset to 1
-        assertEq(dailyGM.brokenStreak(user1), 0); // NO broken streak saved (Too late)
+        assertEq(getCurrentStreak(user1), 1); // Reset to 1
+        assertEq(getBrokenStreak(user1), 0); // NO broken streak saved (Too late)
 
         // Try to restore (should fail)
-        vm.expectRevert("No broken streak to restore");
+        vm.expectRevert(DailyGM.NoBrokenStreak.selector);
         dailyGM.restoreStreak{value: 0.0005 ether}();
         
         vm.stopPrank();
@@ -112,7 +118,21 @@ contract DailyGMTest is Test {
 
     function testRenounceOwnership() public {
         vm.prank(owner);
-        vm.expectRevert("Renouncing ownership is disabled");
+        vm.expectRevert(DailyGM.RenounceOwnershipDisabled.selector);
         dailyGM.renounceOwnership();
+    }
+
+    // Helpers to wrap struct access for tests
+    function getCurrentStreak(address user) internal view returns (uint32) {
+        (, uint32 streak, , , ) = dailyGM.userStats(user);
+        return streak;
+    }
+    function getTotalGMs(address user) internal view returns (uint32) {
+        (, , uint32 total, , ) = dailyGM.userStats(user);
+        return total;
+    }
+    function getBrokenStreak(address user) internal view returns (uint32) {
+        (, , , , uint32 broken) = dailyGM.userStats(user);
+        return broken;
     }
 }

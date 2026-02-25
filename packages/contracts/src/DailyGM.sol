@@ -6,11 +6,23 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 
 contract DailyGM is Ownable, ReentrancyGuard, Pausable {
-    mapping(address => uint256) public lastGMTime;
-    mapping(address => uint256) public currentStreak;
-    mapping(address => uint256) public totalGMs;
-    mapping(address => uint256) public longestStreak;
-    mapping(address => uint256) public brokenStreak; // Stores the streak that was just lost
+    struct UserStats {
+        uint40 lastGMTime;
+        uint32 currentStreak;
+        uint32 totalGMs;
+        uint32 longestStreak;
+        uint32 brokenStreak;
+    }
+    mapping(address => UserStats) public userStats;
+
+    // Custom Errors
+    error IncorrectFee();
+    error GMTooSoon();
+    error NoBrokenStreak();
+    error NoFunds();
+    error WithdrawFailed();
+    error FeeTooHigh();
+    error RenounceOwnershipDisabled();
     
     // 0.000015 ETH (~$0.05) protocol fee
     // 0.000025 ETH (~$0.08) protocol fee
@@ -27,89 +39,88 @@ contract DailyGM is Ownable, ReentrancyGuard, Pausable {
 
     constructor() Ownable(msg.sender) {}
 
-    function gm() external payable nonReentrant whenNotPaused {
+    function gm() external payable whenNotPaused {
         // Check protocol fee
-        require(msg.value == protocolFee, "Incorrect fee");
+        if (msg.value < protocolFee) revert IncorrectFee();
 
-        uint256 lastTime = lastGMTime[msg.sender];
+        UserStats storage stats = userStats[msg.sender];
+        uint256 lastTime = stats.lastGMTime;
         uint256 currentTime = block.timestamp;
 
         if (lastTime != 0) {
             // Flexible Window: Allow GM after 20 hours (gives 4h buffer before next 'day')
-            require(currentTime >= lastTime + 20 hours, "Already GM'd recently");
+            if (currentTime < lastTime + 20 hours) revert GMTooSoon();
             
             if (currentTime > lastTime + 48 hours) {
                 // Save the streak we are about to lose ONLY if it's within grace period (7 days)
                 // If they have been gone for > 9 days (48h + 7 days), they lose it forever.
                 if (currentTime - lastTime <= 48 hours + 7 days) {
-                    if (currentStreak[msg.sender] > 1) {
-                        brokenStreak[msg.sender] = currentStreak[msg.sender];
+                    if (stats.currentStreak > 1) {
+                        stats.brokenStreak = stats.currentStreak;
+                    } else {
+                        // V3.1 GOD MODE FIX
+                        // If they are inside the grace window but their current streak is already 1, 
+                        // it means they broke a streak, waited, and broke it again without restoring.
+                        // We MUST kill the banked broken streak so they can't exploit it forever.
+                        stats.brokenStreak = 0;
                     }
                 } else {
-                    brokenStreak[msg.sender] = 0; // Zombie streak killed
+                    stats.brokenStreak = 0; // Zombie streak killed
                 }
                 
-                currentStreak[msg.sender] = 1; // Streak broken
+                stats.currentStreak = 1; // Streak broken
             } else {
-                currentStreak[msg.sender] += 1; // Streak continues
+                stats.currentStreak += 1; // Streak continues
                 // If they continue the streak, clear any old broken streak so they can't exploit it later
-                brokenStreak[msg.sender] = 0;
+                stats.brokenStreak = 0;
             }
         } else {
-            currentStreak[msg.sender] = 1; // First GM
+            stats.currentStreak = 1; // First GM
         }
 
         // Update stats
-        totalGMs[msg.sender] += 1;
+        stats.totalGMs += 1;
         totalGMCount += 1;
-        if (currentStreak[msg.sender] > longestStreak[msg.sender]) {
-            longestStreak[msg.sender] = currentStreak[msg.sender];
+        if (stats.currentStreak > stats.longestStreak) {
+            stats.longestStreak = stats.currentStreak;
         }
 
-        lastGMTime[msg.sender] = currentTime;
+        stats.lastGMTime = uint40(currentTime);
 
-        emit GM(msg.sender, currentStreak[msg.sender], currentTime);
+        emit GM(msg.sender, stats.currentStreak, currentTime);
     }
 
-    function restoreStreak() external payable nonReentrant whenNotPaused {
-        require(msg.value == restoreFee, "Incorrect fee");
-        require(brokenStreak[msg.sender] > 0, "No broken streak to restore");
+    function restoreStreak() external payable whenNotPaused {
+        if (msg.value < restoreFee) revert IncorrectFee();
+        UserStats storage stats = userStats[msg.sender];
+        if (stats.brokenStreak == 0) revert NoBrokenStreak();
 
         // Logic: Restore the streak
         // We set their current streak back to what it was
         // And we must treat it as if they GM'd today to keep it valid
         
-        currentStreak[msg.sender] = brokenStreak[msg.sender];
-        brokenStreak[msg.sender] = 0; // Consume the shield
+        stats.currentStreak = stats.brokenStreak;
+        stats.brokenStreak = 0; // Consume the shield
+        stats.lastGMTime = uint40(block.timestamp); // V3.1 GOD MODE FIX: Prevent Ghost Restore
         
         // Update stats if this restored streak is now the longest (it should be equal or less, but good to check)
-        if (currentStreak[msg.sender] > longestStreak[msg.sender]) {
-            longestStreak[msg.sender] = currentStreak[msg.sender];
+        if (stats.currentStreak > stats.longestStreak) {
+            stats.longestStreak = stats.currentStreak;
         }
         
-        // Important: We do NOT update totalGMs here (restoring is not a new GM action, just a fix)
-        // But we DO update lastGMTime to now, effectively counting as their GM for the day?
-        // Actually, if they GM'd (resetting to 1) and THEN restore, they have already GM'd today (as 1).
-        // So we just upgrade that 1 to X.
-        // lastGMTime is already set by the gm() call that triggered the reset.
-        // But what if they haven't GM'd yet today?
-        // The brokenStreak is only set WHEN they GM and it calculates a reset.
-        // So they MUST have just GM'd (reset to 1).
-        // So lastGMTime is already correct (now).
-        
-        emit StreakRestored(msg.sender, currentStreak[msg.sender], block.timestamp);
+        emit StreakRestored(msg.sender, stats.currentStreak, block.timestamp);
     }
 
     function withdraw() external onlyOwner nonReentrant {
         uint256 balance = address(this).balance;
-        require(balance > 0, "No funds to withdraw");
+        if (balance == 0) revert NoFunds();
         (bool success, ) = payable(owner()).call{value: balance}("");
-        require(success, "Withdraw failed");
+        if (!success) revert WithdrawFailed();
     }
 
     function setFees(uint256 _protocolFee, uint256 _restoreFee) external onlyOwner {
-        require(_protocolFee <= 0.01 ether, "Protocol fee too high");
-        require(_restoreFee <= 0.05 ether, "Restore fee too high");
+        if (_protocolFee > 0.01 ether) revert FeeTooHigh();
+        if (_restoreFee > 0.05 ether) revert FeeTooHigh();
         protocolFee = _protocolFee;
         restoreFee = _restoreFee;
         emit FeesUpdated(_protocolFee, _restoreFee);
@@ -125,6 +136,6 @@ contract DailyGM is Ownable, ReentrancyGuard, Pausable {
 
     // Security: Prevent accidental renounceOwnership
     function renounceOwnership() public view override onlyOwner {
-        revert("Renouncing ownership is disabled");
+        revert RenounceOwnershipDisabled();
     }
 }

@@ -18,10 +18,12 @@ export function GMButton() {
     const { sendTransaction, data: hash, isPending, error } = useSendTransaction({
         mutation: {
             onSuccess: () => {
+                toast.dismiss();
                 toast.success("Transaction sent! Waiting for confirmation...");
             },
             onError: (error) => {
                 const cleanMessage = parseError(error);
+                toast.dismiss();
                 toast.error(cleanMessage);
                 playSound('error');
             }
@@ -43,21 +45,38 @@ export function GMButton() {
     });
 
     // Read the last GM time for this user
-    const { data: lastGMTime, refetch } = useReadContract({
+    const { data: userStats, refetch } = useReadContract({
         address: CONTRACT_ADDRESS,
         abi: DAILY_GM_ABI,
-        functionName: 'lastGMTime',
+        functionName: 'userStats',
         args: [address as `0x${string}`],
         query: {
             enabled: !!address,
         }
     });
 
+    const lastGMTime = userStats ? (userStats as [bigint | number, unknown, unknown, unknown, unknown])[0] : null;
+
     const [timeLeft, setTimeLeft] = React.useState<string | null>(null);
+    const [isLapsed, setIsLapsed] = React.useState(false);
+    const [txTimeout, setTxTimeout] = React.useState(false);
+
+    React.useEffect(() => {
+        let timeoutId: NodeJS.Timeout;
+        if (isConfirming) {
+            timeoutId = setTimeout(() => {
+                setTxTimeout(true);
+            }, 60000); // 60 seconds timeout
+        } else {
+            setTxTimeout(false);
+        }
+        return () => clearTimeout(timeoutId);
+    }, [isConfirming]);
 
     React.useEffect(() => {
         if (!lastGMTime) {
             setTimeLeft(null);
+            setIsLapsed(false);
             return;
         }
 
@@ -68,11 +87,17 @@ export function GMButton() {
             // If lastTime is 0, they haven't GM'd yet
             if (lastTime === 0) {
                 setTimeLeft(null);
+                setIsLapsed(false);
                 return;
             }
 
             const nextGM = lastTime + (20 * 60 * 60); // Match contract's 20h cooldown
             const diff = nextGM - now;
+
+            // Check if streak is lapsed (>48h and <9 days)
+            const timeSinceLastGM = now - lastTime;
+            const hasLapsed = timeSinceLastGM > (48 * 60 * 60) && timeSinceLastGM <= ((48 + 7 * 24) * 60 * 60);
+            setIsLapsed(hasLapsed);
 
             if (diff <= 0) {
                 setTimeLeft(null);
@@ -125,7 +150,13 @@ export function GMButton() {
     };
 
     const handleWrapperClick = () => {
-        if (!isConnected || isPending || isConfirming || !!timeLeft) {
+        if (!isConnected) {
+            toast.dismiss();
+            toast.error("Please connect your wallet first! 👛");
+            // Still play error/shake for feedback
+        }
+
+        if (!isConnected || isPending || (isConfirming && !txTimeout) || !!timeLeft) {
             controls.start({
                 x: [0, -10, 10, -10, 10, 0],
                 transition: { duration: 0.4 }
@@ -136,19 +167,35 @@ export function GMButton() {
 
     return (
         <div className="flex flex-col items-center gap-4">
+            {isLapsed && !isSuccess && (
+                <div className="absolute top-1/2 -translate-y-48 z-20 text-center text-xs sm:text-sm font-semibold text-orange-400 bg-orange-400/10 border border-orange-400/20 px-6 py-3 rounded-full shadow-[0_0_30px_-5px_orange] w-max max-w-[90vw] pointer-events-none">
+                    ⚠️ Streak lapsed! GM now to unlock Restore.
+                </div>
+            )}
             <motion.div
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        handleWrapperClick();
+                    }
+                }}
                 animate={controls}
                 onClick={handleWrapperClick}
-                className="rounded-full" // Wrapper to capture clicks even when button is disabled
+                className="rounded-full outline-none focus-visible:ring-4 focus-visible:ring-[#0052FF]/50" // Wrapper to capture clicks even when button is disabled
             >
                 <button
                     onClick={(e) => {
                         e.stopPropagation(); // Just in case, though button disabled usually stops clicks.
                         // However, if disabled, the click might pass through to the wrapper anyway.
                         // If enabled, we want the button click to handle properly.
+                        if (txTimeout && hash) {
+                            window.open(`https://basescan.org/tx/${hash}`, '_blank');
+                            return;
+                        }
                         handleGM();
                     }}
-                    disabled={!isConnected || isPending || isConfirming || !!timeLeft}
+                    disabled={!isConnected || isPending || (isConfirming && !txTimeout) || !!timeLeft}
                     className="group relative flex h-72 w-72 items-center justify-center rounded-full bg-gradient-to-br from-[#0052FF] to-[#0035A0] text-7xl font-black text-white transition-all duration-200 hover:scale-105 hover:shadow-[0_0_80px_-10px_#0052FF] active:scale-95 shadow-[0_0_40px_-10px_rgba(0,82,255,0.4)] ring-4 ring-white/5 backdrop-blur-sm disabled:opacity-80 disabled:cursor-not-allowed disabled:pointer-events-none"
                 >
                     {isPending ? (
@@ -157,10 +204,16 @@ export function GMButton() {
                             <span className="text-lg font-bold text-white/60">Signing...</span>
                         </div>
                     ) : isConfirming ? (
-                        <div className="flex flex-col items-center gap-3">
-                            <Loader2 className="h-16 w-16 animate-spin text-white/50" />
-                            <span className="text-lg font-bold text-white/60">Confirming...</span>
-                        </div>
+                        txTimeout ? (
+                            <div className="flex flex-col items-center gap-2 text-center text-orange-200">
+                                <span className="text-2xl font-black">Check<br />Explorer</span>
+                            </div>
+                        ) : (
+                            <div className="flex flex-col items-center gap-3">
+                                <Loader2 className="h-16 w-16 animate-spin text-white/50" />
+                                <span className="text-lg font-bold text-white/60">Confirming...</span>
+                            </div>
+                        )
                     ) : timeLeft ? (
                         <div className="flex flex-col items-center gap-2 animate-pulse">
                             <Timer className="h-10 w-10 text-white/70" />

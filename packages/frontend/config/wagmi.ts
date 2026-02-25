@@ -18,7 +18,7 @@ export const config = createConfig({
             preference: 'smartWalletOnly',
         }),
         walletConnect({
-            projectId: process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID || 'c04effc81414440057e93b6831d10e8d', // fallback safe key or empty
+            projectId: process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID!,
             showQrModal: true,
         }),
     ],

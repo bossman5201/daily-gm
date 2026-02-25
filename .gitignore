@@ -19,8 +19,11 @@ packages/contracts/cache/
 packages/contracts/out/
 packages/contracts/broadcast/
 
-# OS
+# Mac
 .DS_Store
+
+# Foundry (Security - Prevent accidental commit of private RPCs/Keys)
+foundry.toml
 Thumbs.db
 
 # IDE

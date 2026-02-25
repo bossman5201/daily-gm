@@ -1,6 +1,10 @@
 // Centralized contract configuration
-// Update this address after deploying to Base Mainnet
-export const CONTRACT_ADDRESS = "0xc807c3B44E801C38bb3460E35FCC67BA3B472D55" as const;
+// Update this address after deploying to Base Mainnet via NEXT_PUBLIC_CONTRACT_ADDRESS in .env.local
+export const CONTRACT_ADDRESS = (process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || "0x0000000000000000000000000000000000000000") as `0x${string}`;
+
+if (CONTRACT_ADDRESS === "0x0000000000000000000000000000000000000000") {
+    console.warn('⚠️ CONTRACT_ADDRESS is not set! Add NEXT_PUBLIC_CONTRACT_ADDRESS to your .env.local and Vercel dashboard.');
+}
 
 export const DAILY_GM_ABI = [
     {
@@ -19,36 +23,14 @@ export const DAILY_GM_ABI = [
     },
     {
         inputs: [{ internalType: "address", name: "", type: "address" }],
-        name: "lastGMTime",
-        outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
-        stateMutability: "view",
-        type: "function"
-    },
-    {
-        inputs: [{ internalType: "address", name: "", type: "address" }],
-        name: "currentStreak",
-        outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
-        stateMutability: "view",
-        type: "function"
-    },
-    {
-        inputs: [{ internalType: "address", name: "", type: "address" }],
-        name: "totalGMs",
-        outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
-        stateMutability: "view",
-        type: "function"
-    },
-    {
-        inputs: [{ internalType: "address", name: "", type: "address" }],
-        name: "longestStreak",
-        outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
-        stateMutability: "view",
-        type: "function"
-    },
-    {
-        inputs: [{ internalType: "address", name: "", type: "address" }],
-        name: "brokenStreak",
-        outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+        name: "userStats",
+        outputs: [
+            { internalType: "uint40", name: "lastGMTime", type: "uint40" },
+            { internalType: "uint32", name: "currentStreak", type: "uint32" },
+            { internalType: "uint32", name: "totalGMs", type: "uint32" },
+            { internalType: "uint32", name: "longestStreak", type: "uint32" },
+            { internalType: "uint32", name: "brokenStreak", type: "uint32" }
+        ],
         stateMutability: "view",
         type: "function"
     },
@@ -131,4 +113,11 @@ export const DAILY_GM_ABI = [
         name: "StreakRestored",
         type: "event"
     },
+    { inputs: [], name: "IncorrectFee", type: "error" },
+    { inputs: [], name: "GMTooSoon", type: "error" },
+    { inputs: [], name: "NoBrokenStreak", type: "error" },
+    { inputs: [], name: "NoFunds", type: "error" },
+    { inputs: [], name: "WithdrawFailed", type: "error" },
+    { inputs: [], name: "FeeTooHigh", type: "error" },
+    { inputs: [], name: "RenounceOwnershipDisabled", type: "error" }
 ] as const;

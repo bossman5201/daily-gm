@@ -38,6 +38,8 @@ export function Leaderboard() {
     React.useEffect(() => {
         fetchLeaderboard();
 
+        let timeoutId: NodeJS.Timeout;
+
         // Real-time subscription to 'users' table updates
         const channel = supabase
             .channel('leaderboard_changes')
@@ -49,15 +51,17 @@ export function Leaderboard() {
                     table: 'users',
                 },
                 () => {
-                    // When any user updates, refresh the top 10
-                    // Optimization: We could just update state if the changed user is in top 10,
-                    // but re-fetching top 10 is cheap and safe.
-                    fetchLeaderboard();
+                    // Debounce fetch to prevent thundering herd
+                    clearTimeout(timeoutId);
+                    timeoutId = setTimeout(() => {
+                        fetchLeaderboard();
+                    }, 2000); // 2 second debounce
                 }
             )
             .subscribe();
 
         return () => {
+            clearTimeout(timeoutId);
             supabase.removeChannel(channel);
         };
     }, []);
@@ -121,6 +125,7 @@ export function Leaderboard() {
                     )}
                 </div>
             </div>
+            <p className="text-[10px] text-white/30 text-center mt-3">Rankings update every ~60 seconds</p>
         </div>
     );
 }

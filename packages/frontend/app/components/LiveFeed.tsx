@@ -13,9 +13,12 @@ interface GMEvent {
 export function LiveFeed() {
     const [events, setEvents] = React.useState<GMEvent[]>([]);
     const [isLoading, setIsLoading] = React.useState(true);
+    const [isMounted, setIsMounted] = React.useState(false);
+    const [isError, setIsError] = React.useState(false);
 
     const fetchLogs = async () => {
         try {
+            setIsError(false);
             const { data, error } = await supabase
                 .from('gm_events')
                 .select('*')
@@ -26,12 +29,14 @@ export function LiveFeed() {
             if (data) setEvents(data);
         } catch (error) {
             console.error("Failed to fetch logs:", error);
+            setIsError(true);
         } finally {
             setIsLoading(false);
         }
     };
 
     React.useEffect(() => {
+        setIsMounted(true);
         fetchLogs();
 
         // Real-time subscription to 'gm_events' table updates (INSERTs)
@@ -56,6 +61,8 @@ export function LiveFeed() {
         };
     }, []);
 
+    if (!isMounted) return null; // Prevent hydration mismatch by returning null on server
+
     return (
         <div className="w-full max-w-md mt-8">
             <div className="flex items-center gap-2 mb-4 justify-center">
@@ -64,7 +71,13 @@ export function LiveFeed() {
             </div>
 
             <div className="glass-card rounded-2xl p-2 h-80 overflow-y-auto scrollbar-hide space-y-1 bg-black/40 backdrop-blur-md">
-                {isLoading && events.length === 0 ? (
+                {isError ? (
+                    <div className="flex flex-col items-center justify-center h-full text-center text-red-400 space-y-2">
+                        <div className="w-2 h-2 rounded-full bg-red-500/50 animate-ping" />
+                        <span className="text-xs font-bold">System Offline</span>
+                        <span className="text-[10px] opacity-70">Check connection or API keys</span>
+                    </div>
+                ) : isLoading && events.length === 0 ? (
                     <div className="space-y-2">
                         {[...Array(6)].map((_, i) => (
                             <div key={i} className="flex justify-between items-center p-3 rounded-xl bg-white/5 animate-pulse">
@@ -82,8 +95,8 @@ export function LiveFeed() {
                         <span className="text-xs">Waiting for the first GM...</span>
                     </div>
                 ) : (
-                    events.map((event, i) => (
-                        <div key={`${event.tx_hash}-${i}`} className="flex justify-between items-center text-sm p-3 bg-white/5 rounded-xl border border-white/5 hover:border-white/10 transition-all duration-300 hover:bg-white/10 animate-in slide-in-from-top-2 fade-in duration-500">
+                    events.map((event) => (
+                        <div key={event.tx_hash} className="flex justify-between items-center text-sm p-3 bg-white/5 rounded-xl border border-white/5 hover:border-white/10 transition-all duration-300 hover:bg-white/10 animate-in slide-in-from-top-2 fade-in duration-500">
                             <div className="flex flex-col gap-0.5">
                                 <span className="text-[#0052FF] font-mono font-bold tracking-tight text-xs">
                                     {event.user_address.slice(0, 6)}...{event.user_address.slice(-4)}

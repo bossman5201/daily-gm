@@ -25,7 +25,7 @@ export default function Home() {
   }, [initMiniApp]);
 
   return (
-    <main className="min-h-screen flex flex-col selection:bg-[#0052FF] selection:text-white overflow-x-hidden">
+    <main className="min-h-dvh flex flex-col selection:bg-[#0052FF] selection:text-white overflow-x-hidden">
       <Header />
       <div className="flex-1 flex flex-col items-center justify-center p-6 pb-32 pt-12">
 

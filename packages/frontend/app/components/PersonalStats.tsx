@@ -33,21 +33,9 @@ export function PersonalStats() {
             {
                 address: CONTRACT_ADDRESS,
                 abi: DAILY_GM_ABI,
-                functionName: 'totalGMs',
+                functionName: 'userStats',
                 args: [address as `0x${string}`],
-            },
-            {
-                address: CONTRACT_ADDRESS,
-                abi: DAILY_GM_ABI,
-                functionName: 'longestStreak',
-                args: [address as `0x${string}`],
-            },
-            {
-                address: CONTRACT_ADDRESS,
-                abi: DAILY_GM_ABI,
-                functionName: 'brokenStreak',
-                args: [address as `0x${string}`],
-            },
+            }
         ],
         query: {
             enabled: !!address,
@@ -55,7 +43,7 @@ export function PersonalStats() {
     });
 
     // Read restore fee from contract
-    const { data: restoreFee } = useReadContract({
+    const { data: restoreFee, isLoading: isFeeLoading } = useReadContract({
         address: CONTRACT_ADDRESS,
         abi: DAILY_GM_ABI,
         functionName: 'restoreFee',
@@ -64,10 +52,12 @@ export function PersonalStats() {
     const { writeContract, data: hash, isPending: isWritePending } = useWriteContract({
         mutation: {
             onSuccess: () => {
+                toast.dismiss();
                 toast.success("Restore tx sent! Waiting...");
             },
             onError: (error) => {
                 const cleanMessage = parseError(error);
+                toast.dismiss();
                 toast.error(cleanMessage);
             }
         }
@@ -80,6 +70,7 @@ export function PersonalStats() {
     React.useEffect(() => {
         if (isConfirmed) {
             refetch();
+            toast.dismiss();
             toast.success('Streak Restored! 🛡️', {
                 description: 'Your streak has been saved.',
             });
@@ -87,24 +78,28 @@ export function PersonalStats() {
     }, [isConfirmed, refetch]);
 
     const handleRestore = () => {
+        if (!restoreFee) return;
         writeContract({
             address: CONTRACT_ADDRESS,
             abi: DAILY_GM_ABI,
             functionName: 'restoreStreak',
-            value: restoreFee ?? parseEther('0.0005'),
+            value: restoreFee,
         });
     };
 
     if (!isMounted || !isConnected || !address) return null;
 
-    const totalGMs = stats?.[0]?.result ? Number(stats[0].result) : null;
-    const longestStreak = stats?.[1]?.result ? Number(stats[1].result) : null;
-    const brokenStreak = stats?.[2]?.result ? Number(stats[2].result) : 0;
+    const userStatsData = stats?.[0]?.result as [number, number, number, number, number] | undefined;
+
+    // The tuple returns [lastGMTime, currentStreak, totalGMs, longestStreak, brokenStreak]
+    const totalGMs = userStatsData ? Number(userStatsData[2]) : null;
+    const longestStreak = userStatsData ? Number(userStatsData[3]) : null;
+    const brokenStreak = userStatsData ? Number(userStatsData[4]) : 0;
 
     const isPending = isWritePending || isConfirming;
 
     return (
-        <div className="relative w-full max-w-md mt-12 flex flex-col gap-6 animate-in fade-in zoom-in duration-500 delay-150">
+        <div className="relative w-full max-w-md mt-12 flex flex-col gap-6 animate-in fade-in zoom-in duration-500 delay-150 overflow-hidden p-4">
             {/* The Glow Blob */}
             <div className="absolute -top-10 -left-10 w-72 h-72 bg-blue-600/30 rounded-full mix-blend-screen filter blur-[100px] opacity-40 animate-pulse pointer-events-none"></div>
             <div className="absolute -bottom-10 -right-10 w-72 h-72 bg-purple-600/30 rounded-full mix-blend-screen filter blur-[100px] opacity-40 animate-pulse delay-700 pointer-events-none"></div>
@@ -156,22 +151,26 @@ export function PersonalStats() {
                     <p className="text-sm text-red-200/70 mb-4">
                         You lost a streak of <span className="font-bold text-white">{brokenStreak} days</span>.
                         <br />
-                        Restore it now for {restoreFee ? formatEther(restoreFee) : '0.0005'} ETH?
+                        Restore it now for {restoreFee ? formatEther(restoreFee) : '...'} ETH?
                     </p>
                     <button
                         onClick={handleRestore}
-                        disabled={isPending}
+                        disabled={isPending || isFeeLoading || !restoreFee}
                         className="w-full py-3 bg-red-500 hover:bg-red-600 text-white font-bold rounded-lg transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
                         {isPending ? (
                             <>Restoring...</>
+                        ) : isFeeLoading ? (
+                            <>Loading Fee...</>
                         ) : (
-                            <>Restore Streak ({restoreFee ? formatEther(restoreFee) : '0.0005'} ETH)</>
+                            <>Restore Streak ({restoreFee ? formatEther(restoreFee) : ''} ETH)</>
                         )}
                     </button>
                     {isConfirmed && <p className="text-xs text-green-400 mt-2">Streak Restored!</p>}
                 </div>
             )}
+
+            <p className="text-[10px] text-white/30 text-center mt-2 w-full">Data syncs every ~60 seconds</p>
         </div>
     );
 }
