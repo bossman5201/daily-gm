@@ -16,6 +16,10 @@ export default function Home() {
     try {
       const { sdk } = await import('@farcaster/miniapp-sdk');
       sdk.actions.ready({ disableNativeGestures: true });
+
+      // Prompt the user to add the Mini App + enable notifications
+      // This triggers the webhook with their notification token if they accept
+      sdk.actions.addFrame();
     } catch {
       // Not running inside a Mini App context — safe to ignore
     }

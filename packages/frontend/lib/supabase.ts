@@ -73,6 +73,26 @@ export type Database = {
                     updated_at: string;
                 }>;
             };
+            notification_tokens: {
+                Row: {
+                    id: number;
+                    fid: number;
+                    token: string;
+                    notification_url: string;
+                    created_at: string;
+                };
+                Insert: {
+                    fid: number;
+                    token: string;
+                    notification_url: string;
+                    created_at?: string;
+                };
+                Update: Partial<{
+                    fid: number;
+                    token: string;
+                    notification_url: string;
+                }>;
+            };
         };
         Views: {
             public_leaderboard: {

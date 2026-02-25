@@ -26,6 +26,7 @@ export async function GET() {
             ogDescription: 'Say GM on Base every day to build your streak.',
             ogImageUrl: `${URL}/hero.png`,
             screenshotUrls: [`${URL}/screenshot1.png`],
+            webhookUrl: `${URL}/api/notifications/webhook`,
             noindex: false,
         },
     });
