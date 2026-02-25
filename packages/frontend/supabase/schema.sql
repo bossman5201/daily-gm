@@ -6,6 +6,7 @@ create table if not exists public.gm_events (
   block_number bigint not null,
   block_timestamp bigint not null,
   tx_hash text not null unique,
+  event_type text not null default 'gm', -- 'gm' or 'restore'
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
@@ -32,15 +33,28 @@ create table if not exists public.users (
 alter table public.gm_events enable row level security;
 alter table public.users enable row level security;
 
--- Allow anonymous read access (Leaderboard is public)
--- Note: This exposes ALL columns to public read. 
--- In a real prod app, you'd use a view or select specific columns in the API.
--- For now, client-side filtering is okay as blockchain data is public anyway.
+-- Create a secure public view for the leaderboard exposing ONLY public fields
+create or replace view public.public_leaderboard as
+select 
+  address, 
+  current_streak, 
+  longest_streak, 
+  total_gms, 
+  last_gm, 
+  first_gm_date
+from public.users;
+
+-- Grant access to the view
+grant select on public.public_leaderboard to anon, authenticated;
+
+-- Revoke public access to the raw users table entirely
+create policy "Restrict users table reading to service role only"
+on public.users for select 
+using (auth.role() = 'service_role');
+
+-- Re-allow anonymous read access on gm_events (Live Feed is public)
 create policy "Allow public read access on gm_events"
 on public.gm_events for select using (true);
-
-create policy "Allow public read access on users"
-on public.users for select using (true);
 
 -- Index for faster leaderboard queries
 create index if not exists idx_users_streak on public.users (current_streak desc);

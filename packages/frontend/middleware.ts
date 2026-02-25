@@ -7,7 +7,7 @@ const WINDOW_MS = 60_000; // 1 minute window
 const MAX_REQUESTS = 50;  // 50 requests per minute per IP
 
 export function middleware(req: NextRequest) {
-    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+    const ip = (req as any).ip || req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
     const now = Date.now();
     const window = rateLimit.get(ip);
 

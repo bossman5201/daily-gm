@@ -190,7 +190,7 @@ export function GMButton() {
                         // However, if disabled, the click might pass through to the wrapper anyway.
                         // If enabled, we want the button click to handle properly.
                         if (txTimeout && hash) {
-                            window.open(`https://basescan.org/tx/${hash}`, '_blank');
+                            window.open(`https://basescan.org/tx/${hash}`, '_blank', 'noopener,noreferrer');
                             return;
                         }
                         handleGM();
@@ -229,11 +229,13 @@ export function GMButton() {
 
             {hash && <div className="text-xs text-gray-500">Tx: {hash.slice(0, 6)}...{hash.slice(-4)}</div>}
             {isSuccess && <div className="text-green-500 font-bold">GM Sent! Streak Updated!</div>}
-            {error && (
-                <div className="text-red-500 text-sm max-w-[300px] text-center">
-                    Error: {(error as BaseError).shortMessage || error.message}
-                </div>
-            )}
-        </div>
+            {
+                error && (
+                    <div className="text-red-500 text-sm max-w-[300px] text-center">
+                        Error: {(error as BaseError).shortMessage || error.message}
+                    </div>
+                )
+            }
+        </div >
     );
 }

@@ -18,7 +18,7 @@ export function Leaderboard() {
     const fetchLeaderboard = async () => {
         try {
             const { data, error } = await supabase
-                .from('users')
+                .from('public_leaderboard')
                 .select('address, current_streak, last_gm')
                 .order('current_streak', { ascending: false })
                 .limit(10);

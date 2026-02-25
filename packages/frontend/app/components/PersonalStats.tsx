@@ -1,7 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import { useAccount, useReadContracts, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { useAccount, useReadContracts, useReadContract, useWriteContract, useWaitForTransactionReceipt, useSwitchChain } from 'wagmi';
+import { base } from 'wagmi/chains';
 import { User, Flame, Hash, Shield } from 'lucide-react';
 import { parseEther, formatEther } from 'viem';
 import { toast } from 'sonner';
@@ -21,7 +22,8 @@ function NumberTicker({ value }: { value: number }) {
 }
 
 export function PersonalStats() {
-    const { address, isConnected } = useAccount();
+    const { address, isConnected, chainId } = useAccount();
+    const { switchChain } = useSwitchChain();
     const [isMounted, setIsMounted] = React.useState(false);
 
     React.useEffect(() => {
@@ -79,6 +81,12 @@ export function PersonalStats() {
 
     const handleRestore = () => {
         if (!restoreFee) return;
+
+        if (chainId !== base.id) {
+            switchChain({ chainId: base.id });
+            return;
+        }
+
         writeContract({
             address: CONTRACT_ADDRESS,
             abi: DAILY_GM_ABI,

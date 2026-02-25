@@ -1,12 +1,13 @@
 import { MetadataRoute } from 'next';
 
 export default function robots(): MetadataRoute.Robots {
+    const baseUrl = process.env.NEXT_PUBLIC_URL || 'https://daily-gm.vercel.app';
     return {
         rules: {
             userAgent: '*',
             allow: '/',
             disallow: '/api/',
         },
-        sitemap: `${process.env.NEXT_PUBLIC_URL}/sitemap.xml`,
+        sitemap: `${baseUrl}/sitemap.xml`,
     };
 }

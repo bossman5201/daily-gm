@@ -1,6 +1,6 @@
 
 import { NextResponse } from 'next/server';
-import { createPublicClient, http, parseAbiItem, Log } from 'viem';
+import { createPublicClient, http, parseAbiItem, Log, getAddress } from 'viem';
 import { base, baseSepolia } from 'viem/chains';
 import { CONTRACT_ADDRESS } from '../../../config/contracts';
 
@@ -9,7 +9,7 @@ import { getSupabaseAdmin } from '../../../lib/supabase';
 // Initialize Viem Client (uses server-only RPC key, separate from client-side quota)
 const client = createPublicClient({
     chain: base, // Change to baseSepolia if testing on testnet
-    transport: http(process.env.BASE_RPC_URL || process.env.NEXT_PUBLIC_BASE_RPC_URL)
+    transport: http(process.env.BASE_RPC_URL) // Server-only RPC — no client key fallback
 });
 
 // ABI Events
@@ -21,8 +21,9 @@ const RESTORE_EVENT = parseAbiItem('event StreakRestored(address indexed user, u
 
 export async function GET(request: Request) {
     // 1. Secure the route (Cron Secret)
+    const cronSecret = process.env.CRON_SECRET;
     const authHeader = request.headers.get('authorization');
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
         return new NextResponse('Unauthorized', { status: 401 });
     }
 
@@ -38,7 +39,8 @@ export async function GET(request: Request) {
             .single();
 
         const startBlock = lastEvent?.block_number ? BigInt(lastEvent.block_number) + 1n : DEPLOYMENT_BLOCK;
-        const currentBlock = await client.getBlockNumber();
+        const latestBlock = await client.getBlockNumber();
+        const currentBlock = latestBlock - 5n; // ~10s finality buffer for L2 reorg safety
 
         // Limit scan to 5000 blocks to prevent timeouts
         const endBlock = currentBlock - startBlock > 5000n
@@ -121,19 +123,20 @@ export async function GET(request: Request) {
 
         for (const log of deduplicatedLogs) {
             const { args, blockNumber, transactionHash, eventName } = log as ExpectedLog;
-            const user = args.user;
+            const user = getAddress(args.user); // Normalize to checksummed address
             const timestamp = Number(args.timestamp);
             const streak = Number(args.streak);
 
-            if (eventName === 'GM') {
-                eventsToInsert.push({
-                    user_address: user,
-                    streak: streak,
-                    block_number: Number(blockNumber),
-                    block_timestamp: timestamp,
-                    tx_hash: transactionHash
-                });
-            }
+            // Insert BOTH GM and StreakRestored events into gm_events
+            // so the tx_hash unique constraint deduplicates both on re-scans
+            eventsToInsert.push({
+                user_address: user,
+                streak: streak,
+                block_number: Number(blockNumber),
+                block_timestamp: timestamp,
+                tx_hash: transactionHash,
+                event_type: eventName === 'GM' ? 'gm' : 'restore'
+            });
 
             // Aggregate User Stats for this batch
             if (!userStats.has(user)) {
@@ -143,7 +146,7 @@ export async function GET(request: Request) {
                     total_gms: 0,
                     last_gm: 0,
                     restores_used: 0,
-                    fees_paid: 0
+                    fees_paid_wei: 0n
                 });
             }
 
@@ -151,13 +154,13 @@ export async function GET(request: Request) {
 
             if (eventName === 'GM') {
                 stats.total_gms += 1;
-                stats.fees_paid += 0.000025; // Approx Protocol Fee
+                stats.fees_paid_wei += 25000000000000n; // 0.000025 ETH in wei (no float drift)
                 stats.current_streak = streak; // Contract is truth
                 stats.last_gm = timestamp;
             }
             else if (eventName === 'StreakRestored') {
                 stats.restores_used += 1;
-                stats.fees_paid += 0.0005; // Approx Restore Fee
+                stats.fees_paid_wei += 500000000000000n; // 0.0005 ETH in wei (no float drift)
                 stats.current_streak = streak; // Restored value
                 stats.last_gm = timestamp; // V3.1 GOD MODE FIX: Prevent Ghost Restore desync
             }
@@ -199,7 +202,7 @@ export async function GET(request: Request) {
                         last_gm: batchStats.last_gm ? new Date(batchStats.last_gm * 1000).toISOString() : existing.last_gm,
                         first_gm_date: existing.first_gm_date,
                         restores_used: (existing.restores_used || 0) + batchStats.restores_used,
-                        total_fees_paid: Number(existing.total_fees_paid || 0) + batchStats.fees_paid,
+                        total_fees_paid: (Number(existing.total_fees_paid || 0) + Number(batchStats.fees_paid_wei) / 1e18).toFixed(18),
                         broken_streaks: existing.broken_streaks || 0,
                         updated_at: currentTimeISO
                     });
@@ -212,7 +215,7 @@ export async function GET(request: Request) {
                         last_gm: batchStats.last_gm ? new Date(batchStats.last_gm * 1000).toISOString() : null,
                         first_gm_date: batchStats.last_gm ? new Date(batchStats.last_gm * 1000).toISOString() : currentTimeISO,
                         restores_used: batchStats.restores_used,
-                        total_fees_paid: batchStats.fees_paid,
+                        total_fees_paid: (Number(batchStats.fees_paid_wei) / 1e18).toFixed(18),
                         broken_streaks: 0,
                         updated_at: currentTimeISO
                     });
