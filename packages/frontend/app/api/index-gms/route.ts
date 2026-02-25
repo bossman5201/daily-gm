@@ -13,8 +13,12 @@ const client = createPublicClient({
 });
 
 // ABI Events
-// TODO: Replace with your actual contract deployment block number after deploying
-const DEPLOYMENT_BLOCK = 0n; // ← CHANGE THIS after deploying your contract
+const DEPLOYMENT_BLOCK = BigInt(process.env.DEPLOYMENT_BLOCK || '0');
+
+const FEE_ABI = [
+    { inputs: [], name: 'protocolFee', outputs: [{ type: 'uint256' }], stateMutability: 'view', type: 'function' },
+    { inputs: [], name: 'restoreFee', outputs: [{ type: 'uint256' }], stateMutability: 'view', type: 'function' },
+] as const;
 
 const GM_EVENT = parseAbiItem('event GM(address indexed user, uint256 streak, uint256 timestamp)');
 const RESTORE_EVENT = parseAbiItem('event StreakRestored(address indexed user, uint256 streak, uint256 timestamp)');
@@ -29,6 +33,12 @@ export async function GET(request: Request) {
 
     try {
         const supabase = getSupabaseAdmin();
+
+        // Read current fees from contract (not hardcoded)
+        const [protocolFeeWei, restoreFeeWei] = await Promise.all([
+            client.readContract({ address: CONTRACT_ADDRESS, abi: FEE_ABI, functionName: 'protocolFee' }),
+            client.readContract({ address: CONTRACT_ADDRESS, abi: FEE_ABI, functionName: 'restoreFee' }),
+        ]) as [bigint, bigint];
 
         // 2. Get last indexed block from DB
         const { data: lastEvent } = await supabase
@@ -154,13 +164,13 @@ export async function GET(request: Request) {
 
             if (eventName === 'GM') {
                 stats.total_gms += 1;
-                stats.fees_paid_wei += 25000000000000n; // 0.000025 ETH in wei (no float drift)
+                stats.fees_paid_wei += protocolFeeWei;
                 stats.current_streak = streak; // Contract is truth
                 stats.last_gm = timestamp;
             }
             else if (eventName === 'StreakRestored') {
                 stats.restores_used += 1;
-                stats.fees_paid_wei += 500000000000000n; // 0.0005 ETH in wei (no float drift)
+                stats.fees_paid_wei += restoreFeeWei;
                 stats.current_streak = streak; // Restored value
                 stats.last_gm = timestamp; // V3.1 GOD MODE FIX: Prevent Ghost Restore desync
             }
