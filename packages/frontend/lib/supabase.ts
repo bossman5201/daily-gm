@@ -14,6 +14,7 @@ export type Database = {
                     block_number: number;
                     block_timestamp: number;
                     tx_hash: string;
+                    event_type: string;
                     created_at: string;
                 };
                 Insert: {
@@ -22,6 +23,7 @@ export type Database = {
                     block_number: number;
                     block_timestamp: number;
                     tx_hash: string;
+                    event_type?: string;
                     created_at?: string;
                 };
                 Update: Partial<{
@@ -30,6 +32,7 @@ export type Database = {
                     block_number: number;
                     block_timestamp: number;
                     tx_hash: string;
+                    event_type: string;
                 }>;
             };
             users: {
@@ -71,7 +74,18 @@ export type Database = {
                 }>;
             };
         };
-        Views: Record<string, never>;
+        Views: {
+            public_leaderboard: {
+                Row: {
+                    address: string;
+                    current_streak: number;
+                    longest_streak: number;
+                    total_gms: number;
+                    last_gm: string | null;
+                    first_gm_date: string | null;
+                };
+            };
+        };
         Functions: Record<string, never>;
         Enums: Record<string, never>;
     };

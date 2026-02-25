@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import '@coinbase/onchainkit/styles.css'; // Add OnchainKit styles
@@ -31,6 +31,10 @@ export const metadata: Metadata = {
   },
 };
 
+export const viewport: Viewport = {
+  viewportFit: 'cover',
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -43,7 +47,7 @@ export default function RootLayout({
         <Providers>
           {children}
 
-          <footer className="relative z-10 w-full py-8 text-center text-[10px] text-white/20 space-y-2 pointer-events-auto">
+          <footer className="relative z-10 w-full pt-8 pb-[max(2rem,env(safe-area-inset-bottom))] text-center text-[10px] text-white/20 space-y-2 pointer-events-auto">
             <div className="flex justify-center gap-4 uppercase tracking-widest font-bold">
               <a href="/terms" className="hover:text-white/50 transition-colors">Terms</a>
               <a href="/privacy" className="hover:text-white/50 transition-colors">Privacy</a>

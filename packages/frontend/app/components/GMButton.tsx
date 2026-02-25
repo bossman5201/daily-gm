@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { motion, useAnimation } from "framer-motion";
 import { CONTRACT_ADDRESS, DAILY_GM_ABI } from '../../config/contracts';
 import { parseError } from '../../lib/error';
+import { sdk } from '@farcaster/miniapp-sdk';
 
 export function GMButton() {
     const { address, isConnected, chainId } = useAccount();
@@ -149,6 +150,20 @@ export function GMButton() {
         });
     };
 
+    const handleShare = async () => {
+        const streak = userStats ? Number((userStats as unknown as [bigint, bigint, bigint, bigint, bigint])[1]) : 0;
+        const APP_URL = process.env.NEXT_PUBLIC_URL || 'https://daily-gm-zeta.vercel.app';
+
+        try {
+            await sdk.actions.composeCast({
+                text: `☀️ Just said GM on Base! My streak: ${streak} days 🔥\n\nSay yours:`,
+                embeds: [APP_URL],
+            });
+        } catch {
+            // Not in a mini app context — fallback silently
+        }
+    };
+
     const handleWrapperClick = () => {
         if (!isConnected) {
             toast.dismiss();
@@ -221,6 +236,8 @@ export function GMButton() {
                         </div>
                     ) : isWrongChain ? (
                         <span className="text-2xl">Switch to Base</span>
+                    ) : !isConnected ? (
+                        <span className="text-3xl">☀️ GM</span>
                     ) : (
                         "GM"
                     )}
@@ -229,6 +246,14 @@ export function GMButton() {
 
             {hash && <div className="text-xs text-gray-500">Tx: {hash.slice(0, 6)}...{hash.slice(-4)}</div>}
             {isSuccess && <div className="text-green-500 font-bold">GM Sent! Streak Updated!</div>}
+            {isSuccess && (
+                <button
+                    onClick={handleShare}
+                    className="text-sm font-bold text-[#0052FF] hover:text-white transition-colors mt-1"
+                >
+                    📣 Share on Farcaster
+                </button>
+            )}
             {
                 error && (
                     <div className="text-red-500 text-sm max-w-[300px] text-center">

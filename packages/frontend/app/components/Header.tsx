@@ -18,7 +18,7 @@ import {
 
 export function Header() {
     return (
-        <header className="flex justify-between items-center p-6 border-b border-white/5 bg-black/20 backdrop-blur-md sticky top-0 z-50">
+        <header className="flex justify-between items-center px-6 py-4 pt-[max(1rem,env(safe-area-inset-top))] border-b border-white/5 bg-black/20 backdrop-blur-md sticky top-0 z-50">
             <h1 className="text-2xl font-bold text-white tracking-tighter">
                 Daily <span className="text-[#0052FF]">GM</span>
             </h1>

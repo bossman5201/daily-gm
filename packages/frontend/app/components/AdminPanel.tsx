@@ -41,7 +41,7 @@ export function AdminPanel() {
     };
 
     return (
-        <div className="fixed bottom-4 right-4 p-4 bg-zinc-900 border border-zinc-800 rounded-lg shadow-lg">
+        <div className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-4 p-4 bg-zinc-900 border border-zinc-800 rounded-lg shadow-lg">
             <h3 className="text-sm font-bold text-white mb-2">Admin Panel</h3>
             <Button
                 onClick={handleWithdraw}

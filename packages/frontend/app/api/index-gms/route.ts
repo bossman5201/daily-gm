@@ -36,7 +36,7 @@ export async function GET(request: Request) {
             .select('block_number')
             .order('block_number', { ascending: false })
             .limit(1)
-            .single();
+            .single() as { data: { block_number: number } | null };
 
         const startBlock = lastEvent?.block_number ? BigInt(lastEvent.block_number) + 1n : DEPLOYMENT_BLOCK;
         const latestBlock = await client.getBlockNumber();
@@ -97,7 +97,7 @@ export async function GET(request: Request) {
         const { data: existingEvents } = await supabase
             .from('gm_events')
             .select('tx_hash')
-            .in('tx_hash', txHashes);
+            .in('tx_hash', txHashes) as { data: { tx_hash: string }[] | null };
 
         const existingHashes = new Set(existingEvents?.map(e => e.tx_hash) || []);
 
@@ -172,7 +172,7 @@ export async function GET(request: Request) {
 
         // 5. Batch Insert Events
         if (eventsToInsert.length > 0) {
-            const { error: eventError } = await supabase.from('gm_events').insert(eventsToInsert);
+            const { error: eventError } = await (supabase.from('gm_events') as any).insert(eventsToInsert);
             if (eventError) throw eventError;
         }
 
@@ -184,7 +184,20 @@ export async function GET(request: Request) {
             const { data: existingUsersData } = await supabase
                 .from('users')
                 .select('*')
-                .in('address', addresses);
+                .in('address', addresses) as {
+                    data: {
+                        address: string;
+                        current_streak: number;
+                        longest_streak: number;
+                        total_gms: number;
+                        last_gm: string | null;
+                        first_gm_date: string | null;
+                        restores_used: number;
+                        total_fees_paid: number;
+                        broken_streaks: number;
+                        updated_at: string;
+                    }[] | null
+                };
 
             const existingUsers = new Map(existingUsersData?.map(u => [u.address, u]) || []);
             const upsertData: any[] = [];
@@ -223,8 +236,7 @@ export async function GET(request: Request) {
             }
 
             // Perform a single massive Upsert for all users
-            const { error: upsertError } = await supabase
-                .from('users')
+            const { error: upsertError } = await (supabase.from('users') as any)
                 .upsert(upsertData, { onConflict: 'address' });
 
             if (upsertError) throw upsertError;

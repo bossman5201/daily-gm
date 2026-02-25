@@ -11,11 +11,12 @@ import { AdminPanel } from './components/AdminPanel';
 
 export default function Home() {
   // Signal to the Base App that the mini app is ready
+  // Uses manual SDK import (SSR-safe) — useMiniKit() throws during prerendering
   const initMiniApp = useCallback(async () => {
     try {
       const { sdk } = await import('@farcaster/miniapp-sdk');
       sdk.actions.ready({ disableNativeGestures: true });
-    } catch (err) {
+    } catch {
       // Not running inside a Mini App context — safe to ignore
     }
   }, []);
