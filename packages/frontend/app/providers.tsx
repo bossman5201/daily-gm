@@ -11,16 +11,7 @@ import { base } from 'wagmi/chains';
 
 import { config } from '../config/wagmi';
 
-const queryClient = new QueryClient({
-    defaultOptions: {
-        queries: {
-            // Data is fresh for 1 minute (prevents RPC spam)
-            staleTime: 60 * 1000,
-            // Do not refetch on window focus
-            refetchOnWindowFocus: false,
-        },
-    },
-});
+const queryClient = new QueryClient();
 
 export function Providers({ children }: { children: React.ReactNode }) {
     return (
