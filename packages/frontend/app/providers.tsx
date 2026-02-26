@@ -7,7 +7,6 @@ import {
 } from '@tanstack/react-query';
 import { WagmiProvider } from 'wagmi';
 import { OnchainKitProvider } from '@coinbase/onchainkit';
-import { MiniKitProvider } from '@coinbase/onchainkit/minikit';
 import { base } from 'wagmi/chains';
 
 import { config } from '../config/wagmi';
@@ -34,9 +33,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
                         paymaster: process.env.NEXT_PUBLIC_PAYMASTER_URL || undefined,
                     }}
                 >
-                    <MiniKitProvider>
-                        {children}
-                    </MiniKitProvider>
+                    {children}
                 </OnchainKitProvider>
             </QueryClientProvider>
         </WagmiProvider>
