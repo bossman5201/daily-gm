@@ -1,7 +1,6 @@
 import { http, createConfig, fallback } from 'wagmi';
 import { base } from 'wagmi/chains';
 import { coinbaseWallet, walletConnect } from 'wagmi/connectors';
-import { farcasterMiniApp } from '@farcaster/miniapp-wagmi-connector';
 import { Attribution } from 'ox/erc8021';
 
 // ERC-8021 Builder Code — auto-appended to ALL transactions
@@ -16,7 +15,6 @@ const coinbaseRpcUrl = process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY
 export const config = createConfig({
     chains: [base],
     connectors: [
-        farcasterMiniApp(),
         coinbaseWallet({
             appName: 'Daily GM',
             preference: 'smartWalletOnly',
