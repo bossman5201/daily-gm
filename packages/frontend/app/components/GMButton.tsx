@@ -5,7 +5,7 @@ import { useAccount, useSendTransaction, useWaitForTransactionReceipt, useReadCo
 import { parseEther, encodeFunctionData } from 'viem';
 import { base } from 'wagmi/chains';
 
-import { playSound } from '../../lib/audio';
+
 import { Button } from '@/components/ui/button';
 import { Loader2, Timer } from 'lucide-react';
 import { toast } from 'sonner';
@@ -26,7 +26,7 @@ export function GMButton() {
                 const cleanMessage = parseError(error);
                 toast.dismiss();
                 toast.error(cleanMessage);
-                playSound('error');
+
             }
         }
     });
@@ -133,7 +133,7 @@ export function GMButton() {
                     colors: ['#0052FF', '#FFFFFF', '#000000'] // Base Brand Colors
                 });
             });
-            playSound('success');
+
         }
     }, [isSuccess, refetch]);
 
@@ -144,7 +144,7 @@ export function GMButton() {
             switchChain({ chainId: base.id });
             return;
         }
-        playSound('click');
+
         // 1. Encode the function call (gm())
         const data = encodeFunctionData({
             abi: DAILY_GM_ABI,
@@ -186,7 +186,7 @@ export function GMButton() {
                 x: [0, -10, 10, -10, 10, 0],
                 transition: { duration: 0.4 }
             });
-            playSound('error');
+
         }
     };
 
@@ -222,10 +222,10 @@ export function GMButton() {
                     }}
                     disabled={!isConnected || isPending || (isConfirming && !txTimeout) || !!timeLeft}
                     className={`group relative flex h-72 w-72 items-center justify-center rounded-full bg-gradient-to-br from-[#0052FF] to-[#0035A0] text-7xl font-black text-white transition-all duration-200 hover:scale-105 hover:shadow-[0_0_80px_-10px_#0052FF] active:scale-95 backdrop-blur-sm disabled:opacity-80 disabled:cursor-not-allowed disabled:pointer-events-none ${streakStatus === 'danger'
-                            ? 'ring-4 ring-red-500/60 shadow-[0_0_60px_-10px_rgba(239,68,68,0.6)] animate-pulse'
-                            : streakStatus === 'warning'
-                                ? 'ring-4 ring-yellow-500/40 shadow-[0_0_40px_-10px_rgba(234,179,8,0.4)]'
-                                : 'ring-4 ring-white/5 shadow-[0_0_40px_-10px_rgba(0,82,255,0.4)]'
+                        ? 'ring-4 ring-red-500/60 shadow-[0_0_60px_-10px_rgba(239,68,68,0.6)] animate-pulse'
+                        : streakStatus === 'warning'
+                            ? 'ring-4 ring-yellow-500/40 shadow-[0_0_40px_-10px_rgba(234,179,8,0.4)]'
+                            : 'ring-4 ring-white/5 shadow-[0_0_40px_-10px_rgba(0,82,255,0.4)]'
                         }`}
                 >
                     {isPending ? (

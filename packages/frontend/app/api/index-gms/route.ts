@@ -1,7 +1,7 @@
 
 import { NextResponse } from 'next/server';
 import { createPublicClient, http, parseAbiItem, Log, getAddress } from 'viem';
-import { base, baseSepolia } from 'viem/chains';
+import { base } from 'viem/chains';
 import { CONTRACT_ADDRESS } from '../../../config/contracts';
 
 import { getSupabaseAdmin } from '../../../lib/supabase';
@@ -22,6 +22,8 @@ const FEE_ABI = [
 
 const GM_EVENT = parseAbiItem('event GM(address indexed user, uint256 streak, uint256 timestamp)');
 const RESTORE_EVENT = parseAbiItem('event StreakRestored(address indexed user, uint256 streak, uint256 timestamp)');
+const MILESTONE_EVENT = parseAbiItem('event Milestone(address indexed user, uint256 streak)');
+const REFERRED_EVENT = parseAbiItem('event Referred(address indexed user, address indexed referredBy)');
 
 export async function GET(request: Request) {
     // 1. Secure the route (Cron Secret)
@@ -66,11 +68,13 @@ export async function GET(request: Request) {
         const CHUNK_SIZE = 2000n;
         const allGmLogs: any[] = [];
         const allRestoreLogs: any[] = [];
+        const allMilestoneLogs: any[] = [];
+        const allReferredLogs: any[] = [];
 
         for (let i = startBlock; i <= endBlock; i += CHUNK_SIZE) {
             const chunkEnd = (i + CHUNK_SIZE - 1n) > endBlock ? endBlock : (i + CHUNK_SIZE - 1n);
 
-            const [startGmLogs, startRestoreLogs] = await Promise.all([
+            const [chunkGmLogs, chunkRestoreLogs, chunkMilestoneLogs, chunkReferredLogs] = await Promise.all([
                 client.getLogs({
                     address: CONTRACT_ADDRESS,
                     event: GM_EVENT,
@@ -82,15 +86,29 @@ export async function GET(request: Request) {
                     event: RESTORE_EVENT,
                     fromBlock: i,
                     toBlock: chunkEnd
+                }),
+                client.getLogs({
+                    address: CONTRACT_ADDRESS,
+                    event: MILESTONE_EVENT,
+                    fromBlock: i,
+                    toBlock: chunkEnd
+                }),
+                client.getLogs({
+                    address: CONTRACT_ADDRESS,
+                    event: REFERRED_EVENT,
+                    fromBlock: i,
+                    toBlock: chunkEnd
                 })
             ]);
 
-            allGmLogs.push(...startGmLogs);
-            allRestoreLogs.push(...startRestoreLogs);
+            allGmLogs.push(...chunkGmLogs);
+            allRestoreLogs.push(...chunkRestoreLogs);
+            allMilestoneLogs.push(...chunkMilestoneLogs);
+            allReferredLogs.push(...chunkReferredLogs);
         }
 
         // Merge and sort logs by block number + index to process in order
-        const allLogs = [...allGmLogs, ...allRestoreLogs].sort((a, b) => {
+        const allLogs = [...allGmLogs, ...allRestoreLogs, ...allMilestoneLogs, ...allReferredLogs].sort((a, b) => {
             if (a.blockNumber !== b.blockNumber) return Number(a.blockNumber - b.blockNumber);
             return Number(a.logIndex - b.logIndex);
         });
@@ -122,18 +140,46 @@ export async function GET(request: Request) {
         const eventsToInsert: any[] = [];
         const userStats = new Map<string, any>();
 
-        // Define expected structure based on Viem's Log interface
         type ExpectedLog = {
-            args: { user: string; streak: bigint; timestamp: bigint };
+            args: Record<string, any>;
             blockNumber: bigint;
             transactionHash: string;
-            eventName: 'GM' | 'StreakRestored';
+            eventName: 'GM' | 'StreakRestored' | 'Milestone' | 'Referred';
             logIndex: number;
         };
 
         for (const log of deduplicatedLogs) {
             const { args, blockNumber, transactionHash, eventName } = log as ExpectedLog;
-            const user = getAddress(args.user); // Normalize to checksummed address
+
+            // Handle Milestone and Referred events — just store, don't affect user stats
+            if (eventName === 'Milestone') {
+                const user = getAddress(args.user);
+                eventsToInsert.push({
+                    user_address: user,
+                    streak: Number(args.streak),
+                    block_number: Number(blockNumber),
+                    block_timestamp: 0, // Milestone event has no timestamp arg
+                    tx_hash: transactionHash,
+                    event_type: 'milestone'
+                });
+                continue;
+            }
+
+            if (eventName === 'Referred') {
+                const user = getAddress(args.user);
+                eventsToInsert.push({
+                    user_address: user,
+                    streak: 0, // No streak for referral events
+                    block_number: Number(blockNumber),
+                    block_timestamp: 0,
+                    tx_hash: transactionHash,
+                    event_type: 'referred'
+                });
+                continue;
+            }
+
+            // GM and StreakRestored events
+            const user = getAddress(args.user);
             const timestamp = Number(args.timestamp);
             const streak = Number(args.streak);
 

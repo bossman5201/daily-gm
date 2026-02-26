@@ -27,7 +27,6 @@ contract DailyGM is Ownable, ReentrancyGuard, Pausable {
     error FeeTooHigh();
     error RenounceOwnershipDisabled();
     
-    // 0.000015 ETH (~$0.05) protocol fee
     // 0.000025 ETH (~$0.08) protocol fee
     uint256 public protocolFee = 0.000025 ether;
     // 0.0005 ETH (~$1.50) streak restore fee

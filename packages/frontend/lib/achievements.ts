@@ -58,7 +58,8 @@ export function getAchievements(stats: {
             name: 'Phoenix',
             badge: '🔄',
             description: 'Restored a broken streak',
-            unlocked: stats.brokenStreak === 0 && stats.totalGMs > 1 && stats.longestStreak > stats.currentStreak,
+            // TODO: Enable once restores_used is available from Supabase user stats
+            unlocked: false,
         },
     ];
 }

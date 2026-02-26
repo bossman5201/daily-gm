@@ -23,7 +23,7 @@ const nextConfig: NextConfig = {
               "img-src 'self' data: https:",
               "font-src 'self' https://fonts.gstatic.com",
               "connect-src 'self' https://*.base.org https://*.alchemy.com https://*.coinbase.com https://*.walletconnect.com https://*.reown.com https://*.supabase.co wss://*",
-              "frame-ancestors 'self' https://warpcast.com https://*.farcaster.xyz",
+              "frame-ancestors 'self' https://base.org https://*.base.org https://warpcast.com https://*.farcaster.xyz",
             ].join('; '),
           },
           { key: 'X-Content-Type-Options', value: 'nosniff' },

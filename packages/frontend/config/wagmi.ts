@@ -1,5 +1,5 @@
 import { http, createConfig, fallback } from 'wagmi';
-import { base, baseSepolia } from 'wagmi/chains';
+import { base } from 'wagmi/chains';
 import { coinbaseWallet, walletConnect } from 'wagmi/connectors';
 import { farcasterMiniApp } from '@farcaster/miniapp-wagmi-connector';
 import { Attribution } from 'ox/erc8021';
@@ -10,7 +10,7 @@ const DATA_SUFFIX = Attribution.toDataSuffix({
 });
 
 export const config = createConfig({
-    chains: [base, baseSepolia],
+    chains: [base],
     connectors: [
         farcasterMiniApp(),
         coinbaseWallet({
@@ -29,7 +29,6 @@ export const config = createConfig({
                 http(), // Public RPC backup
             ])
             : http(),
-        [baseSepolia.id]: http(),
     },
     dataSuffix: DATA_SUFFIX,
     ssr: true,

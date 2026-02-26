@@ -9,12 +9,15 @@ export const parseError = (error: any) => {
     if (msg.includes("insufficient funds") || msg.includes("exceeds allowance")) {
         return "Not enough ETH for gas.";
     }
-    // Catch your custom smart contract revert messages!
-    if (msg.includes("Wait 12 hours") || msg.includes("Already GM'd")) {
-        return "You already GM'd! Come back later.";
+    // Match actual contract custom errors (Viem includes error name in message)
+    if (msg.includes("GMTooSoon")) {
+        return "You already GM'd! Come back in 20 hours.";
     }
-    if (msg.includes("Streak broken") || msg.includes("Must restore")) {
-        return "Your streak is broken. Restore it first!";
+    if (msg.includes("IncorrectFee")) {
+        return "Wrong fee amount. Please refresh the page.";
+    }
+    if (msg.includes("NoBrokenStreak")) {
+        return "No broken streak to restore.";
     }
 
     // Fallback for weird RPC errors
