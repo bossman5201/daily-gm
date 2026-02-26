@@ -61,6 +61,7 @@ export function GMButton() {
     const [timeLeft, setTimeLeft] = React.useState<string | null>(null);
     const [isLapsed, setIsLapsed] = React.useState(false);
     const [txTimeout, setTxTimeout] = React.useState(false);
+    const [streakStatus, setStreakStatus] = React.useState<'safe' | 'warning' | 'danger' | null>(null);
 
     React.useEffect(() => {
         let timeoutId: NodeJS.Timeout;
@@ -78,6 +79,7 @@ export function GMButton() {
         if (!lastGMTime) {
             setTimeLeft(null);
             setIsLapsed(false);
+            setStreakStatus(null);
             return;
         }
 
@@ -89,6 +91,7 @@ export function GMButton() {
             if (lastTime === 0) {
                 setTimeLeft(null);
                 setIsLapsed(false);
+                setStreakStatus(null);
                 return;
             }
 
@@ -99,6 +102,12 @@ export function GMButton() {
             const timeSinceLastGM = now - lastTime;
             const hasLapsed = timeSinceLastGM > (48 * 60 * 60) && timeSinceLastGM <= ((48 + 7 * 24) * 60 * 60);
             setIsLapsed(hasLapsed);
+
+            // Streak shield status
+            if (timeSinceLastGM < 20 * 3600) setStreakStatus('safe');         // < 20h — still in cooldown
+            else if (timeSinceLastGM < 36 * 3600) setStreakStatus('safe');    // 20-36h — can GM, still safe
+            else if (timeSinceLastGM < 48 * 3600) setStreakStatus('danger');  // 36-48h — about to break!
+            else setStreakStatus('warning');                                   // > 48h — already broken
 
             if (diff <= 0) {
                 setTimeLeft(null);
@@ -139,7 +148,8 @@ export function GMButton() {
         // 1. Encode the function call (gm())
         const data = encodeFunctionData({
             abi: DAILY_GM_ABI,
-            functionName: 'gm'
+            functionName: 'gm',
+            args: ['0x0000000000000000000000000000000000000000' as `0x${string}`] // No referrer (TODO: read from URL param ?ref=0x...)
         });
 
         // 2. Send the transaction
@@ -211,7 +221,12 @@ export function GMButton() {
                         handleGM();
                     }}
                     disabled={!isConnected || isPending || (isConfirming && !txTimeout) || !!timeLeft}
-                    className="group relative flex h-72 w-72 items-center justify-center rounded-full bg-gradient-to-br from-[#0052FF] to-[#0035A0] text-7xl font-black text-white transition-all duration-200 hover:scale-105 hover:shadow-[0_0_80px_-10px_#0052FF] active:scale-95 shadow-[0_0_40px_-10px_rgba(0,82,255,0.4)] ring-4 ring-white/5 backdrop-blur-sm disabled:opacity-80 disabled:cursor-not-allowed disabled:pointer-events-none"
+                    className={`group relative flex h-72 w-72 items-center justify-center rounded-full bg-gradient-to-br from-[#0052FF] to-[#0035A0] text-7xl font-black text-white transition-all duration-200 hover:scale-105 hover:shadow-[0_0_80px_-10px_#0052FF] active:scale-95 backdrop-blur-sm disabled:opacity-80 disabled:cursor-not-allowed disabled:pointer-events-none ${streakStatus === 'danger'
+                            ? 'ring-4 ring-red-500/60 shadow-[0_0_60px_-10px_rgba(239,68,68,0.6)] animate-pulse'
+                            : streakStatus === 'warning'
+                                ? 'ring-4 ring-yellow-500/40 shadow-[0_0_40px_-10px_rgba(234,179,8,0.4)]'
+                                : 'ring-4 ring-white/5 shadow-[0_0_40px_-10px_rgba(0,82,255,0.4)]'
+                        }`}
                 >
                     {isPending ? (
                         <div className="flex flex-col items-center gap-3">

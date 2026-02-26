@@ -8,7 +8,7 @@ if (CONTRACT_ADDRESS === "0x0000000000000000000000000000000000000000") {
 
 export const DAILY_GM_ABI = [
     {
-        inputs: [],
+        inputs: [{ internalType: "address", name: "_referrer", type: "address" }],
         name: "gm",
         outputs: [],
         stateMutability: "payable",
@@ -119,5 +119,30 @@ export const DAILY_GM_ABI = [
     { inputs: [], name: "NoFunds", type: "error" },
     { inputs: [], name: "WithdrawFailed", type: "error" },
     { inputs: [], name: "FeeTooHigh", type: "error" },
-    { inputs: [], name: "RenounceOwnershipDisabled", type: "error" }
+    { inputs: [], name: "RenounceOwnershipDisabled", type: "error" },
+    {
+        anonymous: false,
+        inputs: [
+            { indexed: true, internalType: "address", name: "user", type: "address" },
+            { indexed: false, internalType: "uint256", name: "streak", type: "uint256" }
+        ],
+        name: "Milestone",
+        type: "event"
+    },
+    {
+        anonymous: false,
+        inputs: [
+            { indexed: true, internalType: "address", name: "user", type: "address" },
+            { indexed: true, internalType: "address", name: "referredBy", type: "address" }
+        ],
+        name: "Referred",
+        type: "event"
+    },
+    {
+        inputs: [{ internalType: "address", name: "", type: "address" }],
+        name: "referrer",
+        outputs: [{ internalType: "address", name: "", type: "address" }],
+        stateMutability: "view",
+        type: "function"
+    },
 ] as const;

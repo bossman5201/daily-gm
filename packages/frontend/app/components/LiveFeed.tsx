@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useAccount } from 'wagmi';
 import { supabase } from '../../lib/supabase';
 
 interface GMEvent {
@@ -11,6 +12,7 @@ interface GMEvent {
 }
 
 export function LiveFeed() {
+    const { address } = useAccount();
     const [events, setEvents] = React.useState<GMEvent[]>([]);
     const [isLoading, setIsLoading] = React.useState(true);
     const [isMounted, setIsMounted] = React.useState(false);
@@ -95,22 +97,31 @@ export function LiveFeed() {
                         <span className="text-xs">Waiting for the first GM...</span>
                     </div>
                 ) : (
-                    events.map((event) => (
-                        <div key={event.tx_hash} className="flex justify-between items-center text-sm p-3 bg-white/5 rounded-xl border border-white/5 hover:border-white/10 transition-all duration-300 hover:bg-white/10 animate-in slide-in-from-top-2 fade-in duration-500">
-                            <div className="flex flex-col gap-0.5">
-                                <span className="text-[#0052FF] font-mono font-bold tracking-tight text-xs">
-                                    {event.user_address.slice(0, 6)}...{event.user_address.slice(-4)}
-                                </span>
-                                <span className="text-[10px] text-white/30 font-medium uppercase tracking-wider">
-                                    {new Date(event.block_timestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                </span>
+                    events.map((event) => {
+                        const isYou = address && event.user_address.toLowerCase() === address.toLowerCase();
+                        return (
+                            <div key={event.tx_hash} className={`flex justify-between items-center text-sm p-3 rounded-xl border transition-all duration-300 animate-in slide-in-from-top-2 fade-in duration-500 ${isYou
+                                    ? 'bg-[#0052FF]/10 border-[#0052FF]/30 shadow-[0_0_20px_-5px_rgba(0,82,255,0.3)]'
+                                    : 'bg-white/5 border-white/5 hover:border-white/10 hover:bg-white/10'
+                                }`}>
+                                <div className="flex flex-col gap-0.5">
+                                    <div className="flex items-center gap-1.5">
+                                        <span className={`font-mono font-bold tracking-tight text-xs ${isYou ? 'text-white' : 'text-[#0052FF]'}`}>
+                                            {isYou ? 'YOU' : `${event.user_address.slice(0, 6)}...${event.user_address.slice(-4)}`}
+                                        </span>
+                                        {isYou && <span className="text-[8px] bg-[#0052FF] text-white px-1.5 py-0.5 rounded-full font-bold">GM!</span>}
+                                    </div>
+                                    <span className="text-[10px] text-white/30 font-medium uppercase tracking-wider">
+                                        {new Date(event.block_timestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-1.5 bg-black/40 px-3 py-1 rounded-full border border-white/5">
+                                    <span className="text-white font-bold text-[10px] tracking-wide">Streak: <span className="text-[#0052FF]">{event.streak}</span></span>
+                                    <span className="text-xs">🔥</span>
+                                </div>
                             </div>
-                            <div className="flex items-center gap-1.5 bg-black/40 px-3 py-1 rounded-full border border-white/5">
-                                <span className="text-white font-bold text-[10px] tracking-wide">Streak: <span className="text-[#0052FF]">{event.streak}</span></span>
-                                <span className="text-xs">🔥</span>
-                            </div>
-                        </div>
-                    ))
+                        );
+                    })
                 )}
             </div>
         </div>

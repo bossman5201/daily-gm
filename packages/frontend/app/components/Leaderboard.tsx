@@ -4,6 +4,7 @@ import * as React from 'react';
 import { Trophy } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { Name } from '@coinbase/onchainkit/identity';
+import { getRank } from '../../lib/ranks';
 
 interface LeaderboardEntry {
     address: string;
@@ -113,7 +114,7 @@ export function Leaderboard() {
                                                     address={leader.address as `0x${string}`}
                                                     className="font-mono text-sm text-white/70 group-hover:text-white transition-colors"
                                                 />
-                                                {isTop3 && <span className="text-[9px] text-white/20 uppercase tracking-widest font-bold">Leader</span>}
+                                                {(() => { const r = getRank(leader.current_streak); return r ? <span className="text-[9px] text-white/30 uppercase tracking-widest font-bold">{r.badge} {r.name}</span> : null; })()}
                                             </div>
                                         </div>
                                         <div className="flex flex-col items-end">

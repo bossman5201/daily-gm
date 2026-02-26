@@ -15,6 +15,9 @@ contract DailyGM is Ownable, ReentrancyGuard, Pausable {
     }
     mapping(address => UserStats) public userStats;
 
+    // Referral tracking — stores who referred whom (set once on first GM)
+    mapping(address => address) public referrer;
+
     // Custom Errors
     error IncorrectFee();
     error GMTooSoon();
@@ -36,12 +39,14 @@ contract DailyGM is Ownable, ReentrancyGuard, Pausable {
     event GM(address indexed user, uint256 streak, uint256 timestamp);
     event StreakRestored(address indexed user, uint256 streak, uint256 timestamp);
     event FeesUpdated(uint256 newProtocolFee, uint256 newRestoreFee);
+    event Milestone(address indexed user, uint256 streak);
+    event Referred(address indexed user, address indexed referredBy);
 
     constructor() Ownable(msg.sender) {}
 
-    function gm() external payable whenNotPaused {
+    function gm(address _referrer) external payable whenNotPaused {
         // Check protocol fee
-        if (msg.value < protocolFee) revert IncorrectFee();
+        if (msg.value != protocolFee) revert IncorrectFee();
 
         UserStats storage stats = userStats[msg.sender];
         uint256 lastTime = stats.lastGMTime;
@@ -76,6 +81,12 @@ contract DailyGM is Ownable, ReentrancyGuard, Pausable {
             }
         } else {
             stats.currentStreak = 1; // First GM
+
+            // Record referrer on first GM only
+            if (_referrer != address(0) && _referrer != msg.sender) {
+                referrer[msg.sender] = _referrer;
+                emit Referred(msg.sender, _referrer);
+            }
         }
 
         // Update stats
@@ -88,10 +99,16 @@ contract DailyGM is Ownable, ReentrancyGuard, Pausable {
         stats.lastGMTime = uint40(currentTime);
 
         emit GM(msg.sender, stats.currentStreak, currentTime);
+
+        // Emit milestone events at key streaks
+        if (stats.currentStreak == 7 || stats.currentStreak == 30 ||
+            stats.currentStreak == 100 || stats.currentStreak == 365) {
+            emit Milestone(msg.sender, stats.currentStreak);
+        }
     }
 
     function restoreStreak() external payable whenNotPaused {
-        if (msg.value < restoreFee) revert IncorrectFee();
+        if (msg.value != restoreFee) revert IncorrectFee();
         UserStats storage stats = userStats[msg.sender];
         if (stats.brokenStreak == 0) revert NoBrokenStreak();
 

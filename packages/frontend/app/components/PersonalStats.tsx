@@ -9,6 +9,8 @@ import { toast } from 'sonner';
 import { motion, useSpring, useTransform } from "framer-motion";
 import { CONTRACT_ADDRESS, DAILY_GM_ABI } from '../../config/contracts';
 import { parseError } from '../../lib/error';
+import { getRank } from '../../lib/ranks';
+import { getAchievements } from '../../lib/achievements';
 
 function NumberTicker({ value }: { value: number }) {
     const spring = useSpring(0, { bounce: 0, duration: 2000 });
@@ -102,7 +104,15 @@ export function PersonalStats() {
     // The tuple returns [lastGMTime, currentStreak, totalGMs, longestStreak, brokenStreak]
     const totalGMs = userStatsData ? Number(userStatsData[2]) : null;
     const longestStreak = userStatsData ? Number(userStatsData[3]) : null;
+    const currentStreak = userStatsData ? Number(userStatsData[1]) : 0;
     const brokenStreak = userStatsData ? Number(userStatsData[4]) : 0;
+    const rank = getRank(currentStreak);
+    const achievements = getAchievements({
+        totalGMs: totalGMs ?? 0,
+        longestStreak: longestStreak ?? 0,
+        currentStreak,
+        brokenStreak,
+    });
 
     const isPending = isWritePending || isConfirming;
 
@@ -117,6 +127,27 @@ export function PersonalStats() {
                 <div className="flex items-center gap-2 mb-6 justify-center opacity-60 group-hover:opacity-100 transition-opacity">
                     <User className="w-4 h-4 text-[#0052FF]" />
                     <h3 className="text-xs font-bold uppercase tracking-[0.2em]">Your Stats</h3>
+                </div>
+
+                {rank && (
+                    <div className="flex items-center justify-center gap-2 mb-6 py-2 px-4 rounded-full bg-white/5 border border-white/10 w-fit mx-auto">
+                        <span className="text-lg">{rank.badge}</span>
+                        <span className="text-xs font-bold uppercase tracking-widest text-white/60">{rank.name}</span>
+                    </div>
+                )}
+
+                {/* Achievement Badges */}
+                <div className="flex items-center justify-center gap-3 mb-6 flex-wrap">
+                    {achievements.map((a) => (
+                        <div
+                            key={a.id}
+                            title={a.unlocked ? `${a.name}: ${a.description}` : `🔒 ${a.name}: ${a.description}`}
+                            className={`text-2xl transition-all duration-300 cursor-default ${a.unlocked ? 'opacity-100 scale-100' : 'opacity-20 grayscale scale-90'
+                                }`}
+                        >
+                            {a.badge}
+                        </div>
+                    ))}
                 </div>
 
                 <div className="grid grid-cols-2 gap-8 relative">

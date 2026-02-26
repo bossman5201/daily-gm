@@ -8,6 +8,7 @@ import { Leaderboard } from './components/Leaderboard';
 import { PersonalStats } from './components/PersonalStats';
 import { GlobalStats } from './components/GlobalStats';
 import { AdminPanel } from './components/AdminPanel';
+import { HeatMap } from './components/HeatMap';
 
 export default function Home() {
   // Signal to the Base App that the mini app is ready
@@ -47,6 +48,7 @@ export default function Home() {
 
 
           <PersonalStats />
+          <HeatMap />
         </div>
 
         {/* Global Counter */}
