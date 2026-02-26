@@ -9,6 +9,10 @@ const DATA_SUFFIX = Attribution.toDataSuffix({
     codes: ['bc_caxvmr3l'],
 });
 
+const coinbaseRpcUrl = process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY
+    ? `https://api.developer.coinbase.com/rpc/v1/base/${process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY}`
+    : undefined;
+
 export const config = createConfig({
     chains: [base],
     connectors: [
@@ -23,12 +27,10 @@ export const config = createConfig({
         }),
     ],
     transports: {
-        [base.id]: process.env.NEXT_PUBLIC_BASE_RPC_URL
-            ? fallback([
-                http(process.env.NEXT_PUBLIC_BASE_RPC_URL),
-                http(), // Public RPC backup
-            ])
-            : http(),
+        [base.id]: fallback([
+            coinbaseRpcUrl ? http(coinbaseRpcUrl) : http(),
+            http('https://mainnet.base.org'),
+        ]),
     },
     dataSuffix: DATA_SUFFIX,
     ssr: true,
