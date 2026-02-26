@@ -2,7 +2,7 @@
     "crons": [
         {
             "path": "/api/index-gms",
-            "schedule": "*/5 * * * *"
+            "schedule": "0 0 * * *"
         },
         {
             "path": "/api/notifications/send",
