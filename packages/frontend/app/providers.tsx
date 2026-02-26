@@ -8,10 +8,19 @@ import {
 import { WagmiProvider } from 'wagmi';
 import { OnchainKitProvider } from '@coinbase/onchainkit';
 import { base } from 'wagmi/chains';
+import { createPublicClient, http } from 'viem';
+import { mainnet } from 'viem/chains';
 
 import { config } from '../config/wagmi';
 
 const queryClient = new QueryClient();
+
+const apiKey = process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY;
+
+const mainnetClient = createPublicClient({
+    chain: mainnet,
+    transport: http(`https://api.developer.coinbase.com/rpc/v1/mainnet/${apiKey}`),
+});
 
 export function Providers({ children }: { children: React.ReactNode }) {
     return (
@@ -22,6 +31,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
                     chain={base}
                     config={{
                         paymaster: process.env.NEXT_PUBLIC_PAYMASTER_URL || undefined,
+                    }}
+                    defaultPublicClients={{
+                        [mainnet.id]: mainnetClient,
                     }}
                 >
                     {children}
