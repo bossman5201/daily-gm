@@ -1,0 +1,16 @@
+# Compiler output
+cache/
+out/
+
+# Environment variables — NEVER commit private keys
+.env
+.env.*
+
+# Broadcast logs (contain deployer details)
+broadcast/
+
+# Docs
+docs/
+
+# Coverage
+lcov.info
