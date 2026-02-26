@@ -25,12 +25,12 @@ export function Header() {
             <div className="flex flex-col items-end gap-1">
                 <Wallet>
                     <ConnectWallet className="bg-[#0052FF] text-white hover:bg-[#0040CB] rounded-full px-4 py-2 font-bold transition-all">
-                        <Avatar className="h-6 w-6" />
+                        <Avatar chain={base} className="h-6 w-6" />
                         <Name chain={base} />
                     </ConnectWallet>
                     <WalletDropdown>
                         <Identity className="px-4 pt-3 pb-2" hasCopyAddressOnClick>
-                            <Avatar />
+                            <Avatar chain={base} />
                             <Name chain={base} />
                             <Address />
                             <EthBalance />
