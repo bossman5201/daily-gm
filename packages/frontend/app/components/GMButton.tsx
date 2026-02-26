@@ -125,6 +125,10 @@ export function GMButton() {
     React.useEffect(() => {
         if (isSuccess) {
             refetch(); // Update lastGMTime immediately after success
+
+            // Trigger background indexing immediately
+            fetch('/api/trigger-index', { method: 'POST' }).catch(console.error);
+
             import('canvas-confetti').then((confetti) => {
                 confetti.default({
                     particleCount: 150,

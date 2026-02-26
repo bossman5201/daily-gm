@@ -3,7 +3,8 @@
 import * as React from 'react';
 import { Trophy } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import { Name } from '@coinbase/onchainkit/identity';
+import { Name, Avatar } from '@coinbase/onchainkit/identity';
+import { base } from 'wagmi/chains';
 import { getRank } from '../../lib/ranks';
 
 interface LeaderboardEntry {
@@ -42,15 +43,15 @@ export function Leaderboard() {
 
         let timeoutId: NodeJS.Timeout;
 
-        // Real-time subscription to 'users' table updates
+        // Real-time subscription to 'gm_events' table updates
         const channel = supabase
             .channel('leaderboard_changes')
             .on(
                 'postgres_changes',
                 {
-                    event: '*', // Listen to INSERT and UPDATE
+                    event: 'INSERT', // Listen to INSERT
                     schema: 'public',
-                    table: 'users',
+                    table: 'gm_events',
                 },
                 () => {
                     // Debounce fetch to prevent thundering herd
@@ -109,9 +110,11 @@ export function Leaderboard() {
                                             <div className={`w-6 text-center font-black ${rankColor} text-lg`}>
                                                 {i + 1}
                                             </div>
+                                            <Avatar address={leader.address as `0x${string}`} chain={base} className="w-8 h-8 rounded-full bg-black/40 border border-white/10" />
                                             <div className="flex flex-col">
                                                 <Name
                                                     address={leader.address as `0x${string}`}
+                                                    chain={base}
                                                     className="font-mono text-sm text-white/70 group-hover:text-white transition-colors"
                                                 />
                                                 {(() => { const r = getRank(leader.current_streak); return r ? <span className="text-[9px] text-white/30 uppercase tracking-widest font-bold">{r.badge} {r.name}</span> : null; })()}

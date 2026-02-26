@@ -14,7 +14,7 @@ import {
     Identity,
     EthBalance,
 } from '@coinbase/onchainkit/identity';
-
+import { base } from 'wagmi/chains';
 
 export function Header() {
     return (
@@ -26,12 +26,12 @@ export function Header() {
                 <Wallet>
                     <ConnectWallet className="bg-[#0052FF] text-white hover:bg-[#0040CB] rounded-full px-4 py-2 font-bold transition-all">
                         <Avatar className="h-6 w-6" />
-                        <Name />
+                        <Name chain={base} />
                     </ConnectWallet>
                     <WalletDropdown>
                         <Identity className="px-4 pt-3 pb-2" hasCopyAddressOnClick>
                             <Avatar />
-                            <Name />
+                            <Name chain={base} />
                             <Address />
                             <EthBalance />
                         </Identity>
