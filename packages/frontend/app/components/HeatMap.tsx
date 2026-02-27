@@ -32,11 +32,15 @@ export function HeatMap() {
                 if (data && data.length > 0) {
                     const days = new Set<string>();
                     data.forEach((e: { block_timestamp: number }) => {
-                        const date = new Date(e.block_timestamp * 1000);
-                        days.add(date.toISOString().split('T')[0]); // YYYY-MM-DD
+                        const d = new Date(e.block_timestamp * 1000);
+                        const localDateStr = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+                        days.add(localDateStr);
                     });
                     setGmDays(days);
-                    setFirstGmDate(new Date((data[0] as { block_timestamp: number }).block_timestamp * 1000));
+
+                    const firstDate = new Date((data[0] as { block_timestamp: number }).block_timestamp * 1000);
+                    firstDate.setHours(0, 0, 0, 0); // Strip time-of-day so the first day's cell isn't filtered out
+                    setFirstGmDate(firstDate);
                 }
             } catch (err) {
                 console.error('HeatMap fetch error:', err);
@@ -60,7 +64,8 @@ export function HeatMap() {
     for (let i = totalDays - 1; i >= 0; i--) {
         const d = new Date(today);
         d.setDate(d.getDate() - i);
-        days.push({ date: d, dateStr: d.toISOString().split('T')[0] });
+        const localDateStr = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        days.push({ date: d, dateStr: localDateStr });
     }
 
     // Group into weeks (columns)
