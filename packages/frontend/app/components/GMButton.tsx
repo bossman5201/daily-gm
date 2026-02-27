@@ -149,6 +149,29 @@ export function GMButton() {
             return;
         }
 
+        // 🚀 INJECT: Silently capture native Farcaster / Coinbase Profile from the Mini App SDK
+        const fetchAndSaveProfile = async () => {
+            try {
+                const ctx = await sdk.context;
+                const profile = ctx?.user;
+                if (profile) {
+                    fetch('/api/save-profile', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            address,
+                            username: profile.username,
+                            pfpUrl: profile.pfpUrl,
+                            displayName: profile.displayName
+                        })
+                    }).catch(console.error);
+                }
+            } catch (err) {
+                console.error("Failed to read context", err);
+            }
+        };
+        fetchAndSaveProfile();
+
         // 1. Encode the function call (gm())
         const data = encodeFunctionData({
             abi: DAILY_GM_ABI,

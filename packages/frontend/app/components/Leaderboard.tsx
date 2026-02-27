@@ -2,15 +2,14 @@
 
 import * as React from 'react';
 import { Trophy } from 'lucide-react';
-import { Name, Avatar } from '@coinbase/onchainkit/identity';
-import { base } from 'wagmi/chains';
 import { getRank } from '../../lib/ranks';
 
 interface LeaderboardEntry {
     address: string;
     current_streak: number;
     last_gm: string;
-    // We can add more fields if needed
+    farcaster_username?: string;
+    farcaster_pfp_url?: string;
 }
 
 export function Leaderboard() {
@@ -83,13 +82,17 @@ export function Leaderboard() {
                                             <div className={`w-6 text-center font-black ${rankColor} text-lg`}>
                                                 {i + 1}
                                             </div>
-                                            <Avatar address={leader.address as `0x${string}`} chain={base} className="w-8 h-8 rounded-full bg-black/40 border border-white/10" />
+                                            {leader.farcaster_pfp_url ? (
+                                                <img src={leader.farcaster_pfp_url} alt="Avatar" className="w-8 h-8 rounded-full border border-white/10 object-cover" />
+                                            ) : (
+                                                <div className="w-8 h-8 rounded-full bg-black/40 border border-white/10 flex items-center justify-center text-[10px] text-white/50">
+                                                    {leader.address.slice(2, 4)}
+                                                </div>
+                                            )}
                                             <div className="flex flex-col">
-                                                <Name
-                                                    address={leader.address as `0x${string}`}
-                                                    chain={base}
-                                                    className="font-mono text-sm text-white/70 group-hover:text-white transition-colors"
-                                                />
+                                                <span className="font-mono text-sm text-white/70 group-hover:text-white transition-colors">
+                                                    {leader.farcaster_username ? `@${leader.farcaster_username}` : `${leader.address.slice(0, 6)}...${leader.address.slice(-4)}`}
+                                                </span>
                                                 {(() => { const r = getRank(leader.current_streak); return r ? <span className="text-[9px] text-white/30 uppercase tracking-widest font-bold">{r.badge} {r.name}</span> : null; })()}
                                             </div>
                                         </div>

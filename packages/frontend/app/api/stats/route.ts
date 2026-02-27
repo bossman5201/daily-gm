@@ -7,20 +7,23 @@ export async function GET(request: Request) {
         const type = searchParams.get('type');
 
         if (type === 'live-gms') {
-            // Fetch the last 20 GM events directly from Postgres
+            // Fetch the last 20 GM events natively, joined with the users table to attach any cached Farcaster profiles
             const { rows: events } = await sql`
-                SELECT tx_hash, user_address, streak, block_timestamp, created_at
-                FROM public.gm_events
-                ORDER BY created_at DESC
+                SELECT g.tx_hash, g.user_address, g.streak, g.block_timestamp, g.created_at, 
+                       u.farcaster_username, u.farcaster_pfp_url
+                FROM public.gm_events g
+                LEFT JOIN public.users u ON LOWER(g.user_address) = LOWER(u.address)
+                ORDER BY g.created_at DESC
                 LIMIT 20;
             `;
             return NextResponse.json(events);
         }
 
         if (type === 'leaderboard') {
-            // Fetch top 50 users by longest streak
+            // Fetch top 50 users by longest streak and include their cached Farcaster Profiles
             const { rows: users } = await sql`
-                SELECT address, current_streak, longest_streak, total_gms, last_gm
+                SELECT address, current_streak, longest_streak, total_gms, last_gm,
+                       farcaster_username, farcaster_pfp_url
                 FROM public.users
                 ORDER BY longest_streak DESC, total_gms DESC
                 LIMIT 50;

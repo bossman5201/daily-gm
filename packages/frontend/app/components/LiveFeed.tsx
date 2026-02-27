@@ -8,6 +8,8 @@ interface GMEvent {
     streak: number;
     block_timestamp: number;
     tx_hash: string;
+    farcaster_username?: string;
+    farcaster_pfp_url?: string;
 }
 
 export function LiveFeed() {
@@ -87,11 +89,20 @@ export function LiveFeed() {
                                 : 'bg-white/5 border-white/5 hover:border-white/10 hover:bg-white/10'
                                 }`}>
                                 <div className="flex flex-col gap-0.5">
-                                    <div className="flex items-center gap-1.5">
-                                        <span className={`font-mono font-bold tracking-tight text-xs ${isYou ? 'text-white' : 'text-[#0052FF]'}`}>
-                                            {isYou ? 'YOU' : `${event.user_address.slice(0, 6)}...${event.user_address.slice(-4)}`}
-                                        </span>
-                                        {isYou && <span className="text-[8px] bg-[#0052FF] text-white px-1.5 py-0.5 rounded-full font-bold">GM!</span>}
+                                    <div className="flex items-center gap-2">
+                                        {event.farcaster_pfp_url ? (
+                                            <img src={event.farcaster_pfp_url} alt="PFP" className="w-5 h-5 rounded-full object-cover border border-white/10" />
+                                        ) : (
+                                            <div className="w-5 h-5 rounded-full bg-black/40 border border-white/10 flex items-center justify-center text-[7px] text-white/50">
+                                                {event.user_address.slice(2, 4)}
+                                            </div>
+                                        )}
+                                        <div className="flex items-center gap-1.5">
+                                            <span className={`font-mono font-bold tracking-tight text-xs ${isYou ? 'text-white' : 'text-[#0052FF]'}`}>
+                                                {isYou ? 'YOU' : (event.farcaster_username ? `@${event.farcaster_username}` : `${event.user_address.slice(0, 6)}...${event.user_address.slice(-4)}`)}
+                                            </span>
+                                            {isYou && <span className="text-[8px] bg-[#0052FF] text-white px-1.5 py-0.5 rounded-full font-bold">GM!</span>}
+                                        </div>
                                     </div>
                                     <span className="text-[10px] text-white/30 font-medium uppercase tracking-wider">
                                         {new Date(event.block_timestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -106,6 +117,6 @@ export function LiveFeed() {
                     })
                 )}
             </div>
-        </div>
+        </div >
     );
 }
