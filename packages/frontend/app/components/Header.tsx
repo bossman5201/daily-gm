@@ -46,21 +46,21 @@ export function Header() {
                 <div className="flex gap-3 items-center">
                     {/* The Instant Profile Badge (No Wallet Needed) */}
                     {farcasterProfile ? (
-                        <div className="flex items-center gap-2 bg-white/5 border border-white/10 pl-1 pr-3 py-1 rounded-full animate-in fade-in zoom-in duration-500">
+                        <div className="flex items-center gap-3 bg-white/5 border border-white/10 pl-1.5 pr-4 py-1.5 rounded-full animate-in fade-in zoom-in duration-500 hover:bg-white/10 transition-colors cursor-default">
                             {farcasterProfile.pfpUrl ? (
-                                <img src={farcasterProfile.pfpUrl} alt="PFP" className="w-6 h-6 rounded-full object-cover" />
+                                <img src={farcasterProfile.pfpUrl} alt="PFP" className="w-8 h-8 rounded-full object-cover" />
                             ) : (
-                                <div className="w-6 h-6 rounded-full bg-[#0052FF] flex items-center justify-center text-xs font-bold text-white">
+                                <div className="w-8 h-8 rounded-full bg-[#0052FF] flex items-center justify-center text-sm font-bold text-white">
                                     {(farcasterProfile.displayName || farcasterProfile.username || '?').charAt(0).toUpperCase()}
                                 </div>
                             )}
-                            <span className="text-xs font-medium text-white/80">
+                            <span className="text-sm font-bold text-white/90">
                                 {farcasterProfile.displayName || farcasterProfile.username}
                             </span>
                         </div>
                     ) : (
                         <Wallet>
-                            <ConnectWallet className="bg-[#0052FF] text-white hover:bg-[#0040CB] rounded-full px-4 py-2 font-bold transition-all">
+                            <ConnectWallet className="bg-[#0052FF] text-white hover:bg-[#0040CB] rounded-full px-5 py-2.5 font-bold transition-all text-sm">
                                 <Avatar chain={base} className="h-6 w-6" />
                                 <Name chain={base} />
                             </ConnectWallet>
