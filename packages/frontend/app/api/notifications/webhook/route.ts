@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getSupabaseAdmin } from '../../../../lib/supabase';
-
+import { sql } from '@vercel/postgres';
 /**
  * Webhook receiver for Farcaster notification events.
  * 
@@ -32,8 +31,6 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Invalid fid' }, { status: 400 });
         }
 
-        const supabase = getSupabaseAdmin();
-
         if (event === 'frame_added' || event === 'notifications_enabled') {
             // User opted in — save their notification token
             if (!notificationDetails?.token || !notificationDetails?.url) {
@@ -53,24 +50,26 @@ export async function POST(request: Request) {
             }
 
             // --- SECURITY: Rate limit tokens per FID ---
-            const { count } = await (supabase.from('notification_tokens') as any)
-                .select('*', { count: 'exact', head: true })
-                .eq('fid', Number(fid));
+            const { rows: countResult } = await sql`
+                SELECT COUNT(*) as count FROM public.notification_tokens
+                WHERE fid = ${Number(fid)}
+            `;
 
-            if (count !== null && count >= MAX_TOKENS_PER_FID) {
+            const count = parseInt(countResult[0]?.count || '0');
+
+            if (count >= MAX_TOKENS_PER_FID) {
                 return NextResponse.json({ error: 'Token limit reached for this FID' }, { status: 429 });
             }
 
-            const { error } = await (supabase.from('notification_tokens') as any).upsert(
-                {
-                    fid: Number(fid),
-                    token: String(notificationDetails.token).slice(0, 512), // Truncate to prevent oversized tokens
-                    notification_url: notificationDetails.url,
-                },
-                { onConflict: 'fid,token' }
-            );
-
-            if (error) {
+            try {
+                await sql`
+                    INSERT INTO public.notification_tokens (fid, token, notification_url, created_at)
+                    VALUES (${Number(fid)}, ${String(notificationDetails.token).slice(0, 512)}, ${notificationDetails.url}, NOW())
+                    ON CONFLICT (fid, token) DO UPDATE SET
+                        notification_url = EXCLUDED.notification_url,
+                        created_at = NOW()
+                `;
+            } catch (error) {
                 console.error('Failed to save notification token:', error);
                 return NextResponse.json({ error: 'DB error' }, { status: 500 });
             }
@@ -80,11 +79,12 @@ export async function POST(request: Request) {
 
         if (event === 'frame_removed' || event === 'notifications_disabled') {
             // User opted out — remove all their tokens
-            const { error } = await (supabase.from('notification_tokens') as any)
-                .delete()
-                .eq('fid', Number(fid));
-
-            if (error) {
+            try {
+                await sql`
+                    DELETE FROM public.notification_tokens
+                    WHERE fid = ${Number(fid)}
+                `;
+            } catch (error) {
                 console.error('Failed to delete notification token:', error);
                 return NextResponse.json({ error: 'DB error' }, { status: 500 });
             }

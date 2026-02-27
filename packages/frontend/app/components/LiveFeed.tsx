@@ -2,7 +2,6 @@
 
 import * as React from 'react';
 import { useAccount } from 'wagmi';
-import { supabase } from '../../lib/supabase';
 
 interface GMEvent {
     user_address: string;
@@ -21,14 +20,10 @@ export function LiveFeed() {
     const fetchLogs = async () => {
         try {
             setIsError(false);
-            const { data, error } = await supabase
-                .from('gm_events')
-                .select('*')
-                .order('block_timestamp', { ascending: false })
-                .limit(50);
-
-            if (error) throw error;
-            if (data) setEvents(data);
+            const res = await fetch('/api/stats?type=live-gms');
+            if (!res.ok) throw new Error('Failed to fetch');
+            const data = await res.json();
+            setEvents(data);
         } catch (error) {
             console.error("Failed to fetch logs:", error);
             setIsError(true);
@@ -41,25 +36,12 @@ export function LiveFeed() {
         setIsMounted(true);
         fetchLogs();
 
-        // Real-time subscription to 'gm_events' table updates (INSERTs)
-        const channel = supabase
-            .channel('live_feed_changes')
-            .on(
-                'postgres_changes',
-                {
-                    event: 'INSERT',
-                    schema: 'public',
-                    table: 'gm_events',
-                },
-                (payload) => {
-                    const newEvent = payload.new as GMEvent;
-                    setEvents((prev) => [newEvent, ...prev].slice(0, 50));
-                }
-            )
-            .subscribe();
+        // Since we removed Supabase, we fall back to short-polling 
+        // every 15 seconds to simulate a live feed.
+        const interval = setInterval(fetchLogs, 15000);
 
         return () => {
-            supabase.removeChannel(channel);
+            clearInterval(interval);
         };
     }, []);
 
@@ -101,8 +83,8 @@ export function LiveFeed() {
                         const isYou = address && event.user_address.toLowerCase() === address.toLowerCase();
                         return (
                             <div key={event.tx_hash} className={`flex justify-between items-center text-sm p-3 rounded-xl border transition-all duration-300 animate-in slide-in-from-top-2 fade-in duration-500 ${isYou
-                                    ? 'bg-[#0052FF]/10 border-[#0052FF]/30 shadow-[0_0_20px_-5px_rgba(0,82,255,0.3)]'
-                                    : 'bg-white/5 border-white/5 hover:border-white/10 hover:bg-white/10'
+                                ? 'bg-[#0052FF]/10 border-[#0052FF]/30 shadow-[0_0_20px_-5px_rgba(0,82,255,0.3)]'
+                                : 'bg-white/5 border-white/5 hover:border-white/10 hover:bg-white/10'
                                 }`}>
                                 <div className="flex flex-col gap-0.5">
                                     <div className="flex items-center gap-1.5">

@@ -4,8 +4,7 @@ import { createPublicClient, http, parseAbiItem, Log, getAddress } from 'viem';
 import { base } from 'viem/chains';
 import { CONTRACT_ADDRESS } from '../../../config/contracts';
 
-import { getSupabaseAdmin } from '../../../lib/supabase';
-
+import { sql } from '@vercel/postgres';
 // Initialize Viem Client (uses server-only RPC key, separate from client-side quota)
 const client = createPublicClient({
     chain: base, // Change to baseSepolia if testing on testnet
@@ -34,23 +33,19 @@ export async function GET(request: Request) {
     }
 
     try {
-        const supabase = getSupabaseAdmin();
-
         // Read current fees from contract (not hardcoded)
         const [protocolFeeWei, restoreFeeWei] = await Promise.all([
             client.readContract({ address: CONTRACT_ADDRESS, abi: FEE_ABI, functionName: 'protocolFee' }),
             client.readContract({ address: CONTRACT_ADDRESS, abi: FEE_ABI, functionName: 'restoreFee' }),
         ]) as [bigint, bigint];
 
-        // 2. Get last indexed block from DB
-        const { data: lastEvent } = await supabase
-            .from('gm_events')
-            .select('block_number')
-            .order('block_number', { ascending: false })
-            .limit(1)
-            .single() as { data: { block_number: number } | null };
+        // 2. Get last indexed block from dedicated sync_state table
+        const { rows: syncStateResult } = await sql`SELECT last_indexed_block FROM public.sync_state WHERE id = 1 LIMIT 1;`;
 
-        const startBlock = lastEvent?.block_number ? BigInt(lastEvent.block_number) + 1n : DEPLOYMENT_BLOCK;
+        const startBlock = syncStateResult.length > 0
+            ? BigInt(syncStateResult[0].last_indexed_block) + 1n
+            : DEPLOYMENT_BLOCK;
+
         const latestBlock = await client.getBlockNumber();
         const currentBlock = latestBlock - 5n; // ~10s finality buffer for L2 reorg safety
 
@@ -114,6 +109,12 @@ export async function GET(request: Request) {
         });
 
         if (allLogs.length === 0) {
+            // No logs found, but we still MUST update the sync tracker so we don't scan this empty block range forever
+            await sql`
+                INSERT INTO public.sync_state (id, last_indexed_block, updated_at)
+                VALUES (1, ${Number(endBlock)}, NOW())
+                ON CONFLICT (id) DO UPDATE SET last_indexed_block = EXCLUDED.last_indexed_block, updated_at = NOW();
+            `;
             return NextResponse.json({ message: 'No new events', from: Number(startBlock), to: Number(endBlock) });
         }
 
@@ -122,17 +123,25 @@ export async function GET(request: Request) {
         const txHashes = allLogs.map(log => log.transactionHash);
 
         // Check which ones already exist in the DB
-        const { data: existingEvents } = await supabase
-            .from('gm_events')
-            .select('tx_hash')
-            .in('tx_hash', txHashes) as { data: { tx_hash: string }[] | null };
-
-        const existingHashes = new Set(existingEvents?.map(e => e.tx_hash) || []);
+        let existingHashes = new Set<string>();
+        if (txHashes.length > 0) {
+            // Create a parameterized ANY array manually
+            const { rows: existingEvents } = await sql`
+             SELECT tx_hash FROM public.gm_events WHERE tx_hash = ANY(${txHashes as any})
+           `;
+            existingHashes = new Set(existingEvents.map(e => e.tx_hash));
+        }
 
         // Filter out logs that ALREADY exist in the DB to prevent double-counting on reorgs
         const deduplicatedLogs = allLogs.filter(log => !existingHashes.has(log.transactionHash));
 
         if (deduplicatedLogs.length === 0) {
+            // Fast forward the sync state over the reorgs
+            await sql`
+                INSERT INTO public.sync_state (id, last_indexed_block, updated_at)
+                VALUES (1, ${Number(endBlock)}, NOW())
+                ON CONFLICT (id) DO UPDATE SET last_indexed_block = EXCLUDED.last_indexed_block, updated_at = NOW();
+            `;
             return NextResponse.json({ message: 'No new unique events (reorgs skipped)', from: Number(startBlock), to: Number(endBlock) });
         }
 
@@ -228,8 +237,14 @@ export async function GET(request: Request) {
 
         // 5. Batch Insert Events
         if (eventsToInsert.length > 0) {
-            const { error: eventError } = await (supabase.from('gm_events') as any).insert(eventsToInsert);
-            if (eventError) throw eventError;
+            // Because edge functions limit query param length, we'll insert one-by-one or in small batches
+            for (const event of eventsToInsert) {
+                await sql`
+                    INSERT INTO public.gm_events (user_address, streak, block_number, block_timestamp, tx_hash, created_at)
+                    VALUES (${event.user_address}, ${event.streak}, ${event.block_number}, ${event.block_timestamp}, ${event.tx_hash}, NOW())
+                    ON CONFLICT (tx_hash) DO NOTHING;
+                `;
+            }
         }
 
         // 6. Update Users in Bulk (O(1) Network Requests)
@@ -237,66 +252,75 @@ export async function GET(request: Request) {
 
         if (addresses.length > 0) {
             // Fetch all existing users in one query
-            const { data: existingUsersData } = await supabase
-                .from('users')
-                .select('*')
-                .in('address', addresses) as {
-                    data: {
-                        address: string;
-                        current_streak: number;
-                        longest_streak: number;
-                        total_gms: number;
-                        last_gm: string | null;
-                        first_gm_date: string | null;
-                        restores_used: number;
-                        total_fees_paid: number;
-                        broken_streaks: number;
-                        updated_at: string;
-                    }[] | null
-                };
+            const { rows: existingUsersData } = await sql`
+                SELECT * FROM public.users WHERE address = ANY(${addresses as any})
+            `;
 
-            const existingUsers = new Map(existingUsersData?.map(u => [u.address, u]) || []);
-            const upsertData: any[] = [];
-            const currentTimeISO = new Date().toISOString();
+            const existingUsers = new Map(existingUsersData.map(u => [u.address, u]));
 
             for (const [address, batchStats] of userStats) {
                 const existing = existingUsers.get(address);
 
-                if (existing) {
-                    upsertData.push({
-                        address: address,
-                        current_streak: batchStats.current_streak,
-                        longest_streak: Math.max(existing.longest_streak, batchStats.longest_streak),
-                        total_gms: existing.total_gms + batchStats.total_gms,
-                        last_gm: batchStats.last_gm ? new Date(batchStats.last_gm * 1000).toISOString() : existing.last_gm,
-                        first_gm_date: existing.first_gm_date,
-                        restores_used: (existing.restores_used || 0) + batchStats.restores_used,
-                        total_fees_paid: (Number(existing.total_fees_paid || 0) + Number(batchStats.fees_paid_wei) / 1e18).toFixed(18),
-                        broken_streaks: existing.broken_streaks || 0,
-                        updated_at: currentTimeISO
-                    });
-                } else {
-                    upsertData.push({
-                        address: address,
-                        current_streak: batchStats.current_streak,
-                        longest_streak: batchStats.longest_streak,
-                        total_gms: batchStats.total_gms,
-                        last_gm: batchStats.last_gm ? new Date(batchStats.last_gm * 1000).toISOString() : null,
-                        first_gm_date: batchStats.last_gm ? new Date(batchStats.last_gm * 1000).toISOString() : currentTimeISO,
-                        restores_used: batchStats.restores_used,
-                        total_fees_paid: (Number(batchStats.fees_paid_wei) / 1e18).toFixed(18),
-                        broken_streaks: 0,
-                        updated_at: currentTimeISO
-                    });
+                // Calculate correct logic
+                const newTotalGms = (existing?.total_gms || 0) + batchStats.total_gms;
+                const newLongestStreak = Math.max(existing?.longest_streak || 0, batchStats.longest_streak);
+
+                let newLastGm = null;
+                if (batchStats.last_gm) {
+                    newLastGm = new Date(batchStats.last_gm * 1000).toISOString();
+                } else if (existing?.last_gm) {
+                    newLastGm = existing.last_gm.toISOString();
                 }
+
+                let newFirstGmDate = existing?.first_gm_date?.toISOString();
+                if (!newFirstGmDate && batchStats.last_gm) {
+                    newFirstGmDate = new Date(batchStats.last_gm * 1000).toISOString();
+                }
+
+                const newRestoresUsed = (existing?.restores_used || 0) + batchStats.restores_used;
+
+                // Add the Wei to original total if exists
+                let baseFeesNum = 0;
+                if (existing?.total_fees_paid) {
+                    baseFeesNum = parseFloat(existing.total_fees_paid);
+                }
+                const newFeesNum = baseFeesNum + (Number(batchStats.fees_paid_wei) / 1e18);
+
+                await sql`
+                    INSERT INTO public.users (
+                        address, current_streak, longest_streak, total_gms, last_gm, 
+                        first_gm_date, restores_used, total_fees_paid, updated_at
+                    )
+                    VALUES (
+                        ${address}, 
+                        ${batchStats.current_streak}, 
+                        ${newLongestStreak}, 
+                        ${newTotalGms}, 
+                        ${newLastGm}, 
+                        ${newFirstGmDate || new Date().toISOString()}, 
+                        ${newRestoresUsed}, 
+                        ${newFeesNum}, 
+                        NOW()
+                    )
+                    ON CONFLICT (address) DO UPDATE SET 
+                        current_streak = EXCLUDED.current_streak,
+                        longest_streak = EXCLUDED.longest_streak,
+                        total_gms = EXCLUDED.total_gms,
+                        last_gm = EXCLUDED.last_gm,
+                        first_gm_date = COALESCE(public.users.first_gm_date, EXCLUDED.first_gm_date),
+                        restores_used = EXCLUDED.restores_used,
+                        total_fees_paid = EXCLUDED.total_fees_paid,
+                        updated_at = NOW();
+                `;
             }
-
-            // Perform a single massive Upsert for all users
-            const { error: upsertError } = await (supabase.from('users') as any)
-                .upsert(upsertData, { onConflict: 'address' });
-
-            if (upsertError) throw upsertError;
         }
+
+        // 7. FINALLY: Update the global sync state tracker so the next cron job starts from `endBlock`
+        await sql`
+            INSERT INTO public.sync_state (id, last_indexed_block, updated_at)
+            VALUES (1, ${Number(endBlock)}, NOW())
+            ON CONFLICT (id) DO UPDATE SET last_indexed_block = EXCLUDED.last_indexed_block, updated_at = NOW();
+        `;
 
         return NextResponse.json({
             success: true,

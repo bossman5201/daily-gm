@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getSupabaseAdmin } from '../../../../lib/supabase';
+import { sql } from '@vercel/postgres';
 
 /**
  * Cron-triggered endpoint that sends "Your streak is about to break!" 
@@ -17,24 +17,18 @@ export async function GET(request: Request) {
     }
 
     try {
-        const supabase = getSupabaseAdmin();
         const APP_URL = process.env.NEXT_PUBLIC_URL || 'https://daily-gm-zeta.vercel.app';
 
         // 2. Find users at risk of losing their streak
         // Users with active streaks whose last GM was > 20 hours ago
         const twentyHoursAgo = new Date(Date.now() - 20 * 60 * 60 * 1000).toISOString();
 
-        const { data: atRiskUsers } = await supabase
-            .from('users')
-            .select('address, current_streak, last_gm')
-            .gt('current_streak', 0)
-            .lt('last_gm', twentyHoursAgo) as {
-                data: {
-                    address: string;
-                    current_streak: number;
-                    last_gm: string;
-                }[] | null
-            };
+        const { rows: atRiskUsers } = await sql`
+            SELECT address, current_streak, last_gm
+            FROM public.users
+            WHERE current_streak > 0 
+            AND last_gm < ${twentyHoursAgo}
+        `;
 
         if (!atRiskUsers || atRiskUsers.length === 0) {
             return NextResponse.json({ message: 'No at-risk users', sent: 0 });
@@ -43,15 +37,10 @@ export async function GET(request: Request) {
         // 3. We need to match addresses to FIDs to look up tokens
         // Since we don't store FID→address mapping yet, get ALL tokens and send to all
         // This is a simple v1 approach — can be refined later with FID↔address mapping
-        const { data: allTokens } = await supabase
-            .from('notification_tokens')
-            .select('fid, token, notification_url') as {
-                data: {
-                    fid: number;
-                    token: string;
-                    notification_url: string;
-                }[] | null
-            };
+        const { rows: allTokens } = await sql`
+            SELECT fid, token, notification_url 
+            FROM public.notification_tokens
+        `;
 
         if (!allTokens || allTokens.length === 0) {
             return NextResponse.json({ message: 'No notification tokens', sent: 0 });
@@ -93,9 +82,10 @@ export async function GET(request: Request) {
 
                         // Clean up invalid tokens if the API reports them
                         if (result.invalidTokens && result.invalidTokens.length > 0) {
-                            await (supabase.from('notification_tokens') as any)
-                                .delete()
-                                .in('token', result.invalidTokens);
+                            await sql`
+                                DELETE FROM public.notification_tokens
+                                WHERE token = ANY(${result.invalidTokens as any})
+                            `;
                         }
                     } else {
                         const errText = await response.text();

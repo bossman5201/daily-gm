@@ -2,7 +2,6 @@
 
 import * as React from 'react';
 import { Trophy } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
 import { Name, Avatar } from '@coinbase/onchainkit/identity';
 import { base } from 'wagmi/chains';
 import { getRank } from '../../lib/ranks';
@@ -20,15 +19,9 @@ export function Leaderboard() {
 
     const fetchLeaderboard = async () => {
         try {
-            const { data, error } = await supabase
-                .from('public_leaderboard')
-                .select('address, current_streak, last_gm')
-                .order('current_streak', { ascending: false })
-                .limit(10);
-
-            if (error) throw error;
-
-            if (data) {
+            const res = await fetch('/api/stats?type=leaderboard');
+            if (res.ok) {
+                const data = await res.json();
                 setLeaders(data);
             }
         } catch (error) {
@@ -41,31 +34,11 @@ export function Leaderboard() {
     React.useEffect(() => {
         fetchLeaderboard();
 
-        let timeoutId: NodeJS.Timeout;
-
-        // Real-time subscription to 'gm_events' table updates
-        const channel = supabase
-            .channel('leaderboard_changes')
-            .on(
-                'postgres_changes',
-                {
-                    event: 'INSERT', // Listen to INSERT
-                    schema: 'public',
-                    table: 'gm_events',
-                },
-                () => {
-                    // Debounce fetch to prevent thundering herd
-                    clearTimeout(timeoutId);
-                    timeoutId = setTimeout(() => {
-                        fetchLeaderboard();
-                    }, 2000); // 2 second debounce
-                }
-            )
-            .subscribe();
+        // Fall back to polling since Supabase WebSockets are gone
+        const interval = setInterval(fetchLeaderboard, 30000);
 
         return () => {
-            clearTimeout(timeoutId);
-            supabase.removeChannel(channel);
+            clearInterval(interval);
         };
     }, []);
 

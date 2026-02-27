@@ -2,7 +2,6 @@
 
 import * as React from 'react';
 import { useAccount } from 'wagmi';
-import { supabase } from '../../lib/supabase';
 import { Calendar } from 'lucide-react';
 
 /**
@@ -26,12 +25,9 @@ export function HeatMap() {
         const fetchGmDays = async () => {
             setIsLoading(true);
             try {
-                const { data } = await supabase
-                    .from('gm_events')
-                    .select('block_timestamp')
-                    .eq('user_address', address)
-                    .eq('event_type', 'gm')
-                    .order('block_timestamp', { ascending: true });
+                const res = await fetch(`/api/stats?type=heatmap&address=${address}`);
+                if (!res.ok) throw new Error('Fetch failed');
+                const data = await res.json();
 
                 if (data && data.length > 0) {
                     const days = new Set<string>();

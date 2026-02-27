@@ -4,7 +4,6 @@ import * as React from 'react';
 import { useReadContract } from 'wagmi';
 import { CONTRACT_ADDRESS, DAILY_GM_ABI } from '../../config/contracts';
 import { motion, useSpring, useTransform } from 'framer-motion';
-import { supabase } from '../../lib/supabase';
 
 function AnimatedNumber({ value }: { value: number }) {
     const spring = useSpring(0, { bounce: 0, duration: 2000 });
@@ -33,32 +32,31 @@ export function GlobalStats() {
         const todayStart = Math.floor(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).getTime() / 1000);
 
         const fetchToday = async () => {
-            const { count } = await supabase
-                .from('gm_events')
-                .select('*', { count: 'exact', head: true })
-                .eq('event_type', 'gm')
-                .gte('block_timestamp', todayStart);
+            try {
+                const res = await fetch('/api/stats?type=today-count');
+                if (res.ok) {
+                    const data = await res.json();
 
-            if (count !== null) setTodayCount(count);
+                    // Simple animation trigger if count changed
+                    setTodayCount((prev) => {
+                        if (data.count > prev && prev > 0) {
+                            setPulse(true);
+                            setTimeout(() => setPulse(false), 2000);
+                        }
+                        return data.count;
+                    });
+                }
+            } catch (err) {
+                console.error("Failed to fetch today's GM count:", err);
+            }
         };
 
         fetchToday();
 
-        // Real-time: increment on new GMs
-        const channel = supabase
-            .channel('global_pulse')
-            .on(
-                'postgres_changes',
-                { event: 'INSERT', schema: 'public', table: 'gm_events' },
-                () => {
-                    setTodayCount((prev) => prev + 1);
-                    setPulse(true);
-                    setTimeout(() => setPulse(false), 2000);
-                }
-            )
-            .subscribe();
+        // Polling fallback since we removed Supabase WebSockets
+        const interval = setInterval(fetchToday, 30000);
 
-        return () => { supabase.removeChannel(channel); };
+        return () => { clearInterval(interval); };
     }, []);
 
     const count = Number(totalGMCount ?? 0);
