@@ -49,18 +49,15 @@ export async function GET(request: Request) {
         const latestBlock = await client.getBlockNumber();
         const currentBlock = latestBlock - 5n; // ~10s finality buffer for L2 reorg safety
 
-        // Limit scan to 5000 blocks to prevent timeouts
-        const endBlock = currentBlock - startBlock > 5000n
-            ? startBlock + 5000n
-            : currentBlock;
+        const endBlock = currentBlock;
 
         if (startBlock > endBlock) {
             return NextResponse.json({ message: 'Already up to date', block: Number(currentBlock) });
         }
 
         // 3. Fetch logs from RPC in CHUNKS
-        // Limit chunk size to 2000 blocks to prevent "Response too large" RPC errors
-        const CHUNK_SIZE = 2000n;
+        // Increase chunk size to 50,000 blocks since publicnode can handle it
+        const CHUNK_SIZE = 50000n;
         const allGmLogs: any[] = [];
         const allRestoreLogs: any[] = [];
         const allMilestoneLogs: any[] = [];
