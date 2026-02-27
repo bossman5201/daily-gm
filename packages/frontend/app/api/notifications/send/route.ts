@@ -84,7 +84,7 @@ export async function GET(request: Request) {
                         if (result.invalidTokens && result.invalidTokens.length > 0) {
                             await sql`
                                 DELETE FROM public.notification_tokens
-                                WHERE token = ANY(${result.invalidTokens as any})
+                                WHERE token = ANY(${result.invalidTokens as any}::text[])
                             `;
                         }
                     } else {

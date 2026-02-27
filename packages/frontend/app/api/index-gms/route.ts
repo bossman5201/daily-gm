@@ -125,9 +125,8 @@ export async function GET(request: Request) {
         // Check which ones already exist in the DB
         let existingHashes = new Set<string>();
         if (txHashes.length > 0) {
-            // Create a parameterized ANY array manually
             const { rows: existingEvents } = await sql`
-             SELECT tx_hash FROM public.gm_events WHERE tx_hash = ANY(${txHashes as any})
+             SELECT tx_hash FROM public.gm_events WHERE tx_hash = ANY(${txHashes as any}::text[])
            `;
             existingHashes = new Set(existingEvents.map(e => e.tx_hash));
         }
@@ -253,7 +252,7 @@ export async function GET(request: Request) {
         if (addresses.length > 0) {
             // Fetch all existing users in one query
             const { rows: existingUsersData } = await sql`
-                SELECT * FROM public.users WHERE address = ANY(${addresses as any})
+                SELECT * FROM public.users WHERE address = ANY(${addresses as any}::text[])
             `;
 
             const existingUsers = new Map(existingUsersData.map(u => [u.address, u]));
