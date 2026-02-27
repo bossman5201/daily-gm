@@ -9,7 +9,7 @@ export async function GET(request: Request) {
         if (type === 'live-gms') {
             // Fetch the last 20 GM events directly from Postgres
             const { rows: events } = await sql`
-                SELECT tx_hash, user_address, streak, block_timestamp, created_at, event_type
+                SELECT tx_hash, user_address, streak, block_timestamp, created_at
                 FROM public.gm_events
                 ORDER BY created_at DESC
                 LIMIT 20;
@@ -37,7 +37,6 @@ export async function GET(request: Request) {
                  SELECT block_timestamp
                  FROM public.gm_events
                  WHERE user_address = ${address}
-                 AND event_type = 'gm'
                  ORDER BY block_timestamp ASC;
              `;
             return NextResponse.json(heatmapData);
@@ -51,8 +50,7 @@ export async function GET(request: Request) {
             const { rows: todayData } = await sql`
                 SELECT COUNT(*) as exact_count
                 FROM public.gm_events
-                WHERE event_type = 'gm'
-                AND block_timestamp >= ${todayStart};
+                WHERE block_timestamp >= ${todayStart};
             `;
 
             return NextResponse.json({ count: parseInt(todayData[0]?.exact_count || '0') });
