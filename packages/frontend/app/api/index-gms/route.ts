@@ -8,7 +8,7 @@ import { sql } from '@vercel/postgres';
 // Initialize Viem Client (uses public RPC to bypass strict Alchemy Free Tier block range limits)
 const client = createPublicClient({
     chain: base,
-    transport: http('https://mainnet.base.org')
+    transport: http('https://base-rpc.publicnode.com')
 });
 
 // ABI Events
