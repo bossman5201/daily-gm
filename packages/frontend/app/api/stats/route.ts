@@ -36,7 +36,7 @@ export async function GET(request: Request) {
             const { rows: heatmapData } = await sql`
                  SELECT block_timestamp
                  FROM public.gm_events
-                 WHERE user_address = ${address}
+                 WHERE LOWER(user_address) = LOWER(${address})
                  ORDER BY block_timestamp ASC;
              `;
             return NextResponse.json(heatmapData);
