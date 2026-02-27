@@ -5,10 +5,10 @@ import { base } from 'viem/chains';
 import { CONTRACT_ADDRESS } from '../../../config/contracts';
 
 import { sql } from '@vercel/postgres';
-// Initialize Viem Client (uses server-only RPC key, separate from client-side quota)
+// Initialize Viem Client (uses public RPC to bypass strict Alchemy Free Tier block range limits)
 const client = createPublicClient({
-    chain: base, // Change to baseSepolia if testing on testnet
-    transport: http(process.env.BASE_RPC_URL) // Server-only RPC — no client key fallback
+    chain: base,
+    transport: http('https://mainnet.base.org')
 });
 
 // ABI Events
