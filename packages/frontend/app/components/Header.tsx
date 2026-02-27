@@ -45,7 +45,7 @@ export function Header() {
             <div className="flex flex-col items-end gap-1">
                 <div className="flex gap-3 items-center">
                     {/* The Instant Profile Badge (No Wallet Needed) */}
-                    {farcasterProfile && (
+                    {farcasterProfile ? (
                         <div className="flex items-center gap-2 bg-white/5 border border-white/10 pl-1 pr-3 py-1 rounded-full animate-in fade-in zoom-in duration-500">
                             {farcasterProfile.pfpUrl ? (
                                 <img src={farcasterProfile.pfpUrl} alt="PFP" className="w-6 h-6 rounded-full object-cover" />
@@ -58,26 +58,26 @@ export function Header() {
                                 {farcasterProfile.displayName || farcasterProfile.username}
                             </span>
                         </div>
-                    )}
-
-                    <Wallet>
-                        <ConnectWallet className="bg-[#0052FF] text-white hover:bg-[#0040CB] rounded-full px-4 py-2 font-bold transition-all">
-                            <Avatar chain={base} className="h-6 w-6" />
-                            <Name chain={base} />
-                        </ConnectWallet>
-                        <WalletDropdown>
-                            <Identity className="px-4 pt-3 pb-2" hasCopyAddressOnClick>
-                                <Avatar chain={base} />
+                    ) : (
+                        <Wallet>
+                            <ConnectWallet className="bg-[#0052FF] text-white hover:bg-[#0040CB] rounded-full px-4 py-2 font-bold transition-all">
+                                <Avatar chain={base} className="h-6 w-6" />
                                 <Name chain={base} />
-                                <Address />
-                                <EthBalance />
-                            </Identity>
-                            <WalletDropdownLink icon="wallet" href="https://keys.coinbase.com">
-                                Wallet
-                            </WalletDropdownLink>
-                            <WalletDropdownDisconnect />
-                        </WalletDropdown>
-                    </Wallet>
+                            </ConnectWallet>
+                            <WalletDropdown>
+                                <Identity className="px-4 pt-3 pb-2" hasCopyAddressOnClick>
+                                    <Avatar chain={base} />
+                                    <Name chain={base} />
+                                    <Address />
+                                    <EthBalance />
+                                </Identity>
+                                <WalletDropdownLink icon="wallet" href="https://keys.coinbase.com">
+                                    Wallet
+                                </WalletDropdownLink>
+                                <WalletDropdownDisconnect />
+                            </WalletDropdown>
+                        </Wallet>
+                    )}
                 </div>
                 {!farcasterProfile && <span className="text-[10px] text-white/30 tracking-wide mt-1">Coinbase Wallet & Farcaster</span>}
             </div>
