@@ -63,7 +63,7 @@ export function OnboardingModal() {
                             <div className="space-y-4 mb-8 text-left">
                                 <div className="flex items-start gap-3">
                                     <div className="w-6 h-6 rounded-full bg-zinc-800 flex items-center justify-center text-xs font-bold text-white shrink-0 mt-0.5">1</div>
-                                    <p className="text-sm text-zinc-300"><strong className="text-white block">Say GM</strong> Mint your daily GM transaction (~$0.08) to increment your streak.</p>
+                                    <p className="text-sm text-zinc-300"><strong className="text-white block">Say GM</strong> Mint your daily GM transaction to increment your streak.</p>
                                 </div>
                                 <div className="flex items-start gap-3">
                                     <div className="w-6 h-6 rounded-full bg-zinc-800 flex items-center justify-center text-xs font-bold text-white shrink-0 mt-0.5">2</div>
