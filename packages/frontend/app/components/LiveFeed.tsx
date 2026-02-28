@@ -42,8 +42,15 @@ export function LiveFeed() {
         // every 15 seconds to simulate a live feed.
         const interval = setInterval(fetchLogs, 15000);
 
+        const handleOptimisticUpdate = () => {
+            // Wait briefly for optimistic DB write to complete
+            setTimeout(fetchLogs, 500);
+        };
+        window.addEventListener('optimistic-update', handleOptimisticUpdate);
+
         return () => {
             clearInterval(interval);
+            window.removeEventListener('optimistic-update', handleOptimisticUpdate);
         };
     }, []);
 

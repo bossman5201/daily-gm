@@ -36,8 +36,15 @@ export function Leaderboard() {
         // Fall back to polling since Supabase WebSockets are gone
         const interval = setInterval(fetchLeaderboard, 30000);
 
+        const handleOptimisticUpdate = () => {
+            // Wait briefly for optimistic DB write to complete
+            setTimeout(fetchLeaderboard, 500);
+        };
+        window.addEventListener('optimistic-update', handleOptimisticUpdate);
+
         return () => {
             clearInterval(interval);
+            window.removeEventListener('optimistic-update', handleOptimisticUpdate);
         };
     }, []);
 

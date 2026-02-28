@@ -124,10 +124,20 @@ export function GMButton() {
 
     React.useEffect(() => {
         if (isSuccess) {
-            refetch(); // Update lastGMTime immediately after success
+            if (hash && address) {
+                fetch('/api/optimistic-gm', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ address, txHash: hash })
+                }).then(() => {
+                    // Dispatch a global event to instantly refresh Leaderboard/LiveFeed
+                    window.dispatchEvent(new Event('optimistic-update'));
+                    // Trigger real background indexing immediately
+                    fetch('/api/trigger-index', { method: 'POST' }).catch(console.error);
+                }).catch(console.error);
+            }
 
-            // Trigger background indexing immediately
-            fetch('/api/trigger-index', { method: 'POST' }).catch(console.error);
+            refetch(); // Update lastGMTime immediately after success
 
             import('canvas-confetti').then((confetti) => {
                 confetti.default({
@@ -139,7 +149,7 @@ export function GMButton() {
             });
 
         }
-    }, [isSuccess, refetch]);
+    }, [isSuccess, refetch, hash, address]);
 
     const isWrongChain = isConnected && chainId !== base.id;
 

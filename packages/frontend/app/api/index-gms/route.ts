@@ -238,7 +238,9 @@ export async function GET(request: Request) {
                 await sql`
                     INSERT INTO public.gm_events (user_address, streak, block_number, block_timestamp, tx_hash, created_at)
                     VALUES (${event.user_address}, ${event.streak}, ${event.block_number}, ${event.block_timestamp}, ${event.tx_hash}, NOW())
-                    ON CONFLICT (tx_hash) DO NOTHING;
+                    ON CONFLICT (tx_hash) DO UPDATE SET 
+                        block_number = EXCLUDED.block_number,
+                        block_timestamp = EXCLUDED.block_timestamp;
                 `;
             }
         }
