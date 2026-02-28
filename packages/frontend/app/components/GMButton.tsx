@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useAccount, useSendTransaction, useWaitForTransactionReceipt, useReadContract, useSwitchChain, type BaseError } from 'wagmi';
+import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract, useSwitchChain, type BaseError } from 'wagmi';
 import { parseEther, encodeFunctionData } from 'viem';
 import { base } from 'wagmi/chains';
 
@@ -16,7 +16,7 @@ import { sdk } from '@farcaster/miniapp-sdk';
 
 export function GMButton() {
     const { address, isConnected, chainId } = useAccount();
-    const { sendTransaction, data: hash, isPending, error } = useSendTransaction({
+    const { writeContract, data: hash, isPending, error } = useWriteContract({
         mutation: {
             onSuccess: () => {
                 toast.dismiss();
@@ -182,18 +182,13 @@ export function GMButton() {
         };
         fetchAndSaveProfile();
 
-        // 1. Encode the function call (gm())
-        const data = encodeFunctionData({
+        // 1. Send the transaction using useWriteContract to automatically inherit the ERC-8021 dataSuffix globally
+        writeContract({
+            address: CONTRACT_ADDRESS,
             abi: DAILY_GM_ABI,
             functionName: 'gm',
-            args: ['0x0000000000000000000000000000000000000000' as `0x${string}`] // No referrer (TODO: read from URL param ?ref=0x...)
-        });
-
-        // 2. Send the transaction
-        sendTransaction({
-            to: CONTRACT_ADDRESS,
-            value: protocolFee ?? parseEther('0.000025'),
-            data: data
+            args: ['0x0000000000000000000000000000000000000000' as `0x${string}`], // No referrer (TODO: read from URL param ?ref=0x...)
+            value: protocolFee ?? parseEther('0.000025')
         });
     };
 
