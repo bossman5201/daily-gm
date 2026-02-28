@@ -320,7 +320,7 @@ export function GMButton() {
                     onClick={handleShare}
                     className="text-sm font-bold text-[#0052FF] hover:text-white transition-colors mt-1"
                 >
-                    📣 Share on Farcaster
+                    📣 Post on Base App
                 </button>
             )}
             {
