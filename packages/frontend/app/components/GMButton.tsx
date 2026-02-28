@@ -1,8 +1,9 @@
 'use client';
 
 import * as React from 'react';
-import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract, useSwitchChain, type BaseError } from 'wagmi';
-import { parseEther, encodeFunctionData } from 'viem';
+import { useAccount, useReadContract, useSwitchChain, type BaseError } from 'wagmi';
+import { useWriteContracts, useCallsStatus } from 'wagmi/experimental';
+import { parseEther } from 'viem';
 import { base } from 'wagmi/chains';
 
 
@@ -16,25 +17,33 @@ import { sdk } from '@farcaster/miniapp-sdk';
 
 export function GMButton() {
     const { address, isConnected, chainId } = useAccount();
-    const { writeContract, data: hash, isPending, error } = useWriteContract({
+    const { writeContracts, data: callId, isPending, error } = useWriteContracts({
         mutation: {
             onSuccess: () => {
                 toast.dismiss();
                 toast.success("Transaction sent! Waiting for confirmation...");
             },
-            onError: (error) => {
-                const cleanMessage = parseError(error);
+            onError: (err: any) => {
+                const cleanMessage = parseError(err);
                 toast.dismiss();
                 toast.error(cleanMessage);
-
             }
         }
     });
 
     const { switchChain } = useSwitchChain();
-    const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
-        hash,
+
+    const { data: callsStatus } = useCallsStatus({
+        id: (callId as any)?.id || (typeof callId === 'string' ? callId : ''),
+        query: {
+            enabled: !!callId,
+            refetchInterval: (query: any) => query.state?.data?.status === 'CONFIRMED' ? false : 1000,
+        }
     });
+
+    const isConfirming = (callsStatus as any)?.status === 'PENDING';
+    const isSuccess = (callsStatus as any)?.status === 'CONFIRMED';
+    const hash = (callsStatus as any)?.receipts?.[0]?.transactionHash;
 
     const controls = useAnimation();
 
@@ -182,13 +191,26 @@ export function GMButton() {
         };
         fetchAndSaveProfile();
 
-        // 1. Send the transaction using useWriteContract to automatically inherit the ERC-8021 dataSuffix globally
-        writeContract({
-            address: CONTRACT_ADDRESS,
-            abi: DAILY_GM_ABI,
-            functionName: 'gm',
-            args: ['0x0000000000000000000000000000000000000000' as `0x${string}`], // No referrer (TODO: read from URL param ?ref=0x...)
-            value: protocolFee ?? parseEther('0.000025')
+        // 1. Send the transaction using useWriteContracts to explicitly request CDP Paymaster sponsorship
+        const paymasterUrl = process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY
+            ? `https://api.developer.coinbase.com/rpc/v1/base/${process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY}`
+            : '';
+
+        writeContracts({
+            contracts: [
+                {
+                    address: CONTRACT_ADDRESS,
+                    abi: DAILY_GM_ABI as any, // Cast ABI to any to bypass strict literal inference issues in Wagmi experimental batch contracts
+                    functionName: 'gm',
+                    args: ['0x0000000000000000000000000000000000000000' as `0x${string}`], // No referrer (TODO: read from URL param ?ref=0x...)
+                    value: protocolFee ?? parseEther('0.000025')
+                } as any
+            ],
+            capabilities: {
+                paymasterService: {
+                    url: paymasterUrl
+                }
+            }
         });
     };
 
