@@ -275,11 +275,11 @@ export function GMButton() {
                         handleGM();
                     }}
                     disabled={!isConnected || isPending || (isConfirming && !txTimeout) || !!timeLeft}
-                    className={`group relative flex h-72 w-72 items-center justify-center rounded-full bg-gradient-to-br from-[#0052FF] to-[#0035A0] text-7xl font-black text-white transition-all duration-200 hover:scale-105 hover:shadow-[0_0_80px_-10px_#0052FF] active:scale-95 backdrop-blur-sm disabled:opacity-80 disabled:cursor-not-allowed disabled:pointer-events-none ${streakStatus === 'danger'
+                    className={`group relative flex h-72 w-72 items-center justify-center rounded-full bg-gradient-to-br from-[#0052FF] to-[#0035A0] text-7xl font-black text-white transition-all duration-300 hover:scale-105 hover:-rotate-3 hover:shadow-[0_0_80px_-10px_#0052FF] active:scale-95 backdrop-blur-sm disabled:opacity-80 disabled:cursor-not-allowed disabled:pointer-events-none ${streakStatus === 'danger'
                         ? 'ring-4 ring-red-500/60 shadow-[0_0_60px_-10px_rgba(239,68,68,0.6)] animate-pulse'
                         : streakStatus === 'warning'
                             ? 'ring-4 ring-yellow-500/40 shadow-[0_0_40px_-10px_rgba(234,179,8,0.4)]'
-                            : 'ring-4 ring-white/5 shadow-[0_0_40px_-10px_rgba(0,82,255,0.4)]'
+                            : 'ring-4 ring-[#0052FF]/30 shadow-[0_0_60px_-10px_rgba(0,82,255,0.4)] animate-[pulse_3s_ease-in-out_infinite]'
                         }`}
                 >
                     {isPending ? (

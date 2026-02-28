@@ -57,7 +57,7 @@ export function Leaderboard() {
 
             {/* Premium Gradient Border Wrapper */}
             <div className="relative p-[1px] rounded-2xl bg-gradient-to-b from-[#0052FF]/30 via-transparent to-transparent">
-                <div className="glass-card rounded-2xl overflow-hidden p-2 bg-black/80 backdrop-blur-xl min-h-[400px]">
+                <div className="glass-card rounded-2xl overflow-hidden p-2 bg-black/40 backdrop-blur-2xl border border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] min-h-[400px]">
                     {isLoading ? (
                         <div className="space-y-2">
                             {[...Array(10)].map((_, i) => (

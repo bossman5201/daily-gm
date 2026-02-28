@@ -63,7 +63,7 @@ export function LiveFeed() {
                 <h3 className="text-sm font-bold text-white/50 uppercase tracking-wider">Live GMs</h3>
             </div>
 
-            <div className="glass-card rounded-2xl p-2 h-80 overflow-y-auto scrollbar-hide space-y-1 bg-black/40 backdrop-blur-md">
+            <div className="glass-card rounded-2xl p-2 h-80 overflow-y-auto scrollbar-hide space-y-1 bg-black/40 backdrop-blur-2xl border border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)]">
                 {isError ? (
                     <div className="flex flex-col items-center justify-center h-full text-center text-red-400 space-y-2">
                         <div className="w-2 h-2 rounded-full bg-red-500/50 animate-ping" />
