@@ -9,6 +9,7 @@ import { PersonalStats } from './components/PersonalStats';
 import { GlobalStats } from './components/GlobalStats';
 import { AdminPanel } from './components/AdminPanel';
 import { HeatMap } from './components/HeatMap';
+import { OnboardingModal } from './components/OnboardingModal';
 
 export default function Home() {
   // Signal to the Base App that the mini app is ready
@@ -32,6 +33,7 @@ export default function Home() {
 
   return (
     <main className="min-h-dvh flex flex-col selection:bg-[#0052FF] selection:text-white overflow-x-hidden">
+      <OnboardingModal />
       <Header />
       <div className="flex-1 flex flex-col items-center justify-center p-6 pb-32 pt-12">
 
