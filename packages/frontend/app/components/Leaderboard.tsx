@@ -61,7 +61,8 @@ export function Leaderboard() {
                     {isLoading ? (
                         <div className="space-y-2">
                             {[...Array(10)].map((_, i) => (
-                                <div key={i} className="flex justify-between items-center p-3 rounded-xl bg-white/5 animate-pulse">
+                                <div key={i} className="relative flex justify-between items-center p-3 rounded-xl bg-white/5 overflow-hidden">
+                                    <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
                                     <div className="flex items-center gap-3">
                                         <div className="w-8 h-8 rounded-full bg-white/10"></div>
                                         <div className="h-4 w-20 bg-white/10 rounded"></div>

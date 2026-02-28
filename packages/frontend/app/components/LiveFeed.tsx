@@ -73,7 +73,8 @@ export function LiveFeed() {
                 ) : isLoading && events.length === 0 ? (
                     <div className="space-y-2">
                         {[...Array(6)].map((_, i) => (
-                            <div key={i} className="flex justify-between items-center p-3 rounded-xl bg-white/5 animate-pulse">
+                            <div key={i} className="relative flex justify-between items-center p-3 rounded-xl bg-white/5 overflow-hidden">
+                                <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
                                 <div className="flex flex-col gap-2">
                                     <div className="h-3 w-24 bg-white/10 rounded"></div>
                                     <div className="h-2 w-16 bg-white/5 rounded"></div>
@@ -91,7 +92,7 @@ export function LiveFeed() {
                     events.map((event) => {
                         const isYou = address && event.user_address.toLowerCase() === address.toLowerCase();
                         return (
-                            <div key={event.tx_hash} className={`flex justify-between items-center text-sm p-3 rounded-xl border transition-all duration-300 animate-in slide-in-from-top-2 fade-in duration-500 ${isYou
+                            <div key={event.tx_hash} className={`flex justify-between items-center text-sm p-3 rounded-xl border transition-all duration-300 animate-in slide-in-from-right-8 fade-in duration-500 ${isYou
                                 ? 'bg-[#0052FF]/10 border-[#0052FF]/30 shadow-[0_0_20px_-5px_rgba(0,82,255,0.3)]'
                                 : 'bg-white/5 border-white/5 hover:border-white/10 hover:bg-white/10'
                                 }`}>

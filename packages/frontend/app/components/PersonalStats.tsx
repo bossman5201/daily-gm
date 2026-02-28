@@ -156,7 +156,7 @@ export function PersonalStats() {
                     <div className="flex flex-col items-center gap-2">
                         <span className="text-[10px] text-white/40 uppercase tracking-widest font-semibold">Total GMs</span>
                         {totalGMs !== null ? (
-                            <span className="text-4xl font-black text-white text-neon-white">
+                            <span className="text-4xl font-black bg-clip-text text-transparent bg-gradient-to-br from-white to-gray-400 drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">
                                 <NumberTicker value={totalGMs} />
                             </span>
                         ) : (
@@ -168,7 +168,7 @@ export function PersonalStats() {
                         <span className="text-[10px] text-white/40 uppercase tracking-widest font-semibold">Longest Streak</span>
                         <div className="flex items-center gap-2">
                             {longestStreak !== null ? (
-                                <span className="text-4xl font-black text-[#0052FF] text-neon">
+                                <span className="text-4xl font-black bg-clip-text text-transparent bg-gradient-to-br from-[#0052FF] to-cyan-400 drop-shadow-[0_0_15px_rgba(0,82,255,0.4)]">
                                     <NumberTicker value={longestStreak} />
                                 </span>
                             ) : (

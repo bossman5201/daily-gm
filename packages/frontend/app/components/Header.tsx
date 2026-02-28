@@ -60,7 +60,7 @@ export function Header() {
                         </div>
                     ) : (
                         <Wallet>
-                            <ConnectWallet className="bg-[#0052FF] text-white hover:bg-[#0040CB] rounded-full px-5 py-2.5 font-bold transition-all text-sm">
+                            <ConnectWallet className="bg-[#0052FF] text-white hover:bg-[#0040CB] rounded-full px-5 py-2.5 font-bold transition-all text-sm shadow-[0_0_20px_rgba(0,82,255,0.4)] animate-[pulse_2s_ease-in-out_infinite]">
                                 <Avatar chain={base} className="h-6 w-6" />
                                 <Name chain={base} />
                             </ConnectWallet>
