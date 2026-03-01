@@ -18,7 +18,7 @@ export function Leaderboard() {
 
     const fetchLeaderboard = async () => {
         try {
-            const res = await fetch('/api/stats?type=leaderboard');
+            const res = await fetch(`/api/stats?type=leaderboard&t=${Date.now()}`, { cache: 'no-store' });
             if (res.ok) {
                 const data = await res.json();
                 setLeaders(data);

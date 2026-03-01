@@ -81,6 +81,20 @@ export function PersonalStats() {
         }
     }, [isConfirmed, refetch]);
 
+    React.useEffect(() => {
+        const handleOptimisticUpdate = () => {
+            // Wait briefly for optimistic DB write to complete before refixing Wagmi cache
+            setTimeout(() => {
+                refetch();
+            }, 500);
+        };
+        window.addEventListener('optimistic-update', handleOptimisticUpdate);
+
+        return () => {
+            window.removeEventListener('optimistic-update', handleOptimisticUpdate);
+        };
+    }, [refetch]);
+
     const handleRestore = () => {
         if (!restoreFee) return;
 

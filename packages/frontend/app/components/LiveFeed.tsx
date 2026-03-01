@@ -22,7 +22,7 @@ export function LiveFeed() {
     const fetchLogs = async () => {
         try {
             setIsError(false);
-            const res = await fetch('/api/stats?type=live-gms');
+            const res = await fetch(`/api/stats?type=live-gms&t=${Date.now()}`, { cache: 'no-store' });
             if (!res.ok) throw new Error('Failed to fetch');
             const data = await res.json();
             setEvents(data);
