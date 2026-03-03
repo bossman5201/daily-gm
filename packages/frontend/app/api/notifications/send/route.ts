@@ -34,21 +34,36 @@ export async function GET(request: Request) {
             return NextResponse.json({ message: 'No at-risk users', sent: 0 });
         }
 
-        // 3. We need to match addresses to FIDs to look up tokens
-        // Since we don't store FID→address mapping yet, get ALL tokens and send to all
-        // This is a simple v1 approach — can be refined later with FID↔address mapping
-        const { rows: allTokens } = await sql`
-            SELECT fid, token, notification_url 
-            FROM public.notification_tokens
+        // 3. Get notification tokens ONLY for users whose streaks are at risk
+        // Join through users.farcaster_fid (if stored) or fall back to address-based matching
+        // We extract at-risk addresses and find FIDs that have matching profiles
+        const atRiskAddresses = atRiskUsers.map(u => u.address);
+
+        if (atRiskAddresses.length === 0) {
+            return NextResponse.json({ message: 'No at-risk users', sent: 0 });
+        }
+
+        // Get tokens for FIDs that have a profile linked to an at-risk address
+        const { rows: atRiskTokens } = await sql`
+            SELECT nt.fid, nt.token, nt.notification_url 
+            FROM public.notification_tokens nt
+            INNER JOIN public.users u ON u.farcaster_fid = nt.fid
+            WHERE u.address = ANY(${atRiskAddresses as any}::text[])
         `;
 
-        if (!allTokens || allTokens.length === 0) {
+        // Fallback: if no FID↔address mapping exists yet, send to all tokens
+        // This preserves v1 behavior until farcaster_fid is populated
+        const tokensToUse = atRiskTokens.length > 0 ? atRiskTokens : (await sql`
+            SELECT fid, token, notification_url FROM public.notification_tokens
+        `).rows;
+
+        if (!tokensToUse || tokensToUse.length === 0) {
             return NextResponse.json({ message: 'No notification tokens', sent: 0 });
         }
 
         // 4. Group tokens by notification_url (different Farcaster clients have different URLs)
         const urlGroups = new Map<string, string[]>();
-        for (const t of allTokens) {
+        for (const t of tokensToUse) {
             const existing = urlGroups.get(t.notification_url) || [];
             existing.push(t.token);
             urlGroups.set(t.notification_url, existing);

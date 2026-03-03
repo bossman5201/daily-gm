@@ -235,12 +235,20 @@ export async function GET(request: Request) {
         if (eventsToInsert.length > 0) {
             // Because edge functions limit query param length, we'll insert one-by-one or in small batches
             for (const event of eventsToInsert) {
+                // Multi-event fix: GM and Milestone/Referred can share the same tx_hash.
+                // Since gm_events has a UNIQUE constraint on tx_hash, we suffix non-primary events
+                // to avoid silent drops. Format: "0xabc...123-milestone"
+                const effectiveTxHash = event.event_type === 'gm' || event.event_type === 'restore'
+                    ? event.tx_hash
+                    : `${event.tx_hash}-${event.event_type}`;
+
                 await sql`
-                    INSERT INTO public.gm_events (user_address, streak, block_number, block_timestamp, tx_hash, created_at)
-                    VALUES (${event.user_address}, ${event.streak}, ${event.block_number}, ${event.block_timestamp}, ${event.tx_hash}, NOW())
+                    INSERT INTO public.gm_events (user_address, streak, block_number, block_timestamp, tx_hash, created_at, event_type)
+                    VALUES (${event.user_address}, ${event.streak}, ${event.block_number}, ${event.block_timestamp}, ${effectiveTxHash}, NOW(), ${event.event_type})
                     ON CONFLICT (tx_hash) DO UPDATE SET 
                         block_number = EXCLUDED.block_number,
-                        block_timestamp = EXCLUDED.block_timestamp;
+                        block_timestamp = EXCLUDED.block_timestamp,
+                        event_type = EXCLUDED.event_type;
                 `;
             }
         }

@@ -31,11 +31,16 @@ contract DailyGMTest is Test {
         
         // Underpaying should fail
         vm.expectRevert(DailyGM.IncorrectFee.selector);
-        dailyGM.gm{value: 0.000024 ether}();
+        dailyGM.gm{value: 0.000024 ether}(address(0));
 
-        // Overpaying should succeed (Mempool Griefing Fix)
+        // Overpaying should also fail (strict equality check)
         vm.prank(user1);
-        dailyGM.gm{value: 0.000026 ether}();
+        vm.expectRevert(DailyGM.IncorrectFee.selector);
+        dailyGM.gm{value: 0.000026 ether}(address(0));
+
+        // Exact fee should succeed
+        vm.prank(user1);
+        dailyGM.gm{value: 0.000025 ether}(address(0));
         assertEq(getCurrentStreak(user1), 1);
     }
 
@@ -43,7 +48,7 @@ contract DailyGMTest is Test {
         vm.deal(user1, 1 ether);
         vm.prank(user1);
 
-        dailyGM.gm{value: 0.000025 ether}();
+        dailyGM.gm{value: 0.000025 ether}(address(0));
         
         assertEq(getCurrentStreak(user1), 1);
         assertEq(getTotalGMs(user1), 1);
@@ -54,19 +59,19 @@ contract DailyGMTest is Test {
         vm.startPrank(user1);
 
         // Day 1
-        dailyGM.gm{value: 0.000025 ether}();
+        dailyGM.gm{value: 0.000025 ether}(address(0));
         assertEq(getCurrentStreak(user1), 1);
         
         // Day 2 (Flexible window: 21h later is OK)
         vm.warp(block.timestamp + 21 hours);
-        dailyGM.gm{value: 0.000025 ether}();
+        dailyGM.gm{value: 0.000025 ether}(address(0));
         assertEq(getCurrentStreak(user1), 2);
 
         // Fast forward 49 hours from last GM (missed the window)
         vm.warp(block.timestamp + 49 hours);
         
         // Trying to GM again, should reset streak
-        dailyGM.gm{value: 0.000025 ether}();
+        dailyGM.gm{value: 0.000025 ether}(address(0));
         assertEq(getCurrentStreak(user1), 1); // Reset to 1
         assertEq(getBrokenStreak(user1), 2); // Tracked broken streak
         
@@ -80,12 +85,12 @@ contract DailyGMTest is Test {
         vm.prank(user1);
         
         vm.expectRevert(Pausable.EnforcedPause.selector);
-        dailyGM.gm{value: 0.000025 ether}();
+        dailyGM.gm{value: 0.000025 ether}(address(0));
         
         dailyGM.unpause();
         
         vm.prank(user1);
-        dailyGM.gm{value: 0.000025 ether}();
+        dailyGM.gm{value: 0.000025 ether}(address(0));
         assertEq(getCurrentStreak(user1), 1);
     }
 
@@ -94,16 +99,16 @@ contract DailyGMTest is Test {
         vm.startPrank(user1);
 
         // Build streak to 2
-        dailyGM.gm{value: 0.000025 ether}();
+        dailyGM.gm{value: 0.000025 ether}(address(0));
         vm.warp(block.timestamp + 24 hours);
-        dailyGM.gm{value: 0.000025 ether}();
+        dailyGM.gm{value: 0.000025 ether}(address(0));
         assertEq(getCurrentStreak(user1), 2);
 
         // Disappear for 30 days (Zombie Mode)
         vm.warp(block.timestamp + 30 days);
         
         // Return and GM
-        dailyGM.gm{value: 0.000025 ether}();
+        dailyGM.gm{value: 0.000025 ether}(address(0));
         
         // Verification:
         assertEq(getCurrentStreak(user1), 1); // Reset to 1
