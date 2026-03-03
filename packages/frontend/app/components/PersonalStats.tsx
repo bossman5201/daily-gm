@@ -83,10 +83,10 @@ export function PersonalStats() {
 
     React.useEffect(() => {
         const handleOptimisticUpdate = () => {
-            // Wait briefly for optimistic DB write to complete before refixing Wagmi cache
-            setTimeout(() => {
-                refetch();
-            }, 500);
+            // Staggered refetches to give the Base RPC node time to process the new block
+            setTimeout(() => refetch(), 1000);
+            setTimeout(() => refetch(), 3000);
+            setTimeout(() => refetch(), 5000);
         };
         window.addEventListener('optimistic-update', handleOptimisticUpdate);
 

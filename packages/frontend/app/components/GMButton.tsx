@@ -139,14 +139,20 @@ export function GMButton() {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ address, txHash: hash })
                 }).then(() => {
-                    // Dispatch a global event to instantly refresh Leaderboard/LiveFeed
-                    window.dispatchEvent(new Event('optimistic-update'));
+                    // Dispatch a global event to instantly refresh all components
+                    // Give the DB write 800ms to fully commit before notifying listeners
+                    setTimeout(() => {
+                        window.dispatchEvent(new Event('optimistic-update'));
+                    }, 800);
                     // Trigger real background indexing immediately
                     fetch('/api/trigger-index', { method: 'POST' }).catch(console.error);
                 }).catch(console.error);
             }
 
-            refetch(); // Update lastGMTime immediately after success
+            // Staggered refetches for the cooldown timer (reads from blockchain RPC)
+            setTimeout(() => refetch(), 1000);
+            setTimeout(() => refetch(), 3000);
+            setTimeout(() => refetch(), 5000);
 
             import('canvas-confetti').then((confetti) => {
                 confetti.default({

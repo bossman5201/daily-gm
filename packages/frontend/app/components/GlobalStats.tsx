@@ -17,7 +17,7 @@ function AnimatedNumber({ value }: { value: number }) {
 }
 
 export function GlobalStats() {
-    const { data: totalGMCount } = useReadContract({
+    const { data: totalGMCount, refetch: refetchTotal } = useReadContract({
         address: CONTRACT_ADDRESS,
         abi: DAILY_GM_ABI,
         functionName: 'totalGMCount',
@@ -33,7 +33,7 @@ export function GlobalStats() {
 
         const fetchToday = async () => {
             try {
-                const res = await fetch('/api/stats?type=today-count');
+                const res = await fetch(`/api/stats?type=today-count&t=${Date.now()}`, { cache: 'no-store' });
                 if (res.ok) {
                     const data = await res.json();
 
@@ -56,7 +56,19 @@ export function GlobalStats() {
         // Polling fallback since we removed Supabase WebSockets
         const interval = setInterval(fetchToday, 30000);
 
-        return () => { clearInterval(interval); };
+        const handleOptimisticUpdate = () => {
+            // Refetch today count from DB (fast)
+            setTimeout(fetchToday, 1000);
+            // Refetch total from blockchain RPC (needs block processing time)
+            setTimeout(() => refetchTotal(), 3000);
+            setTimeout(() => refetchTotal(), 5000);
+        };
+        window.addEventListener('optimistic-update', handleOptimisticUpdate);
+
+        return () => {
+            clearInterval(interval);
+            window.removeEventListener('optimistic-update', handleOptimisticUpdate);
+        };
     }, []);
 
     const count = Number(totalGMCount ?? 0);

@@ -37,8 +37,9 @@ export function Leaderboard() {
         const interval = setInterval(fetchLeaderboard, 30000);
 
         const handleOptimisticUpdate = () => {
-            // Wait briefly for optimistic DB write to complete
-            setTimeout(fetchLeaderboard, 500);
+            // Staggered refetches: first try after DB write, second as safety net
+            setTimeout(fetchLeaderboard, 1000);
+            setTimeout(fetchLeaderboard, 3000);
         };
         window.addEventListener('optimistic-update', handleOptimisticUpdate);
 

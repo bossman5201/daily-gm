@@ -43,8 +43,9 @@ export function LiveFeed() {
         const interval = setInterval(fetchLogs, 15000);
 
         const handleOptimisticUpdate = () => {
-            // Wait briefly for optimistic DB write to complete
-            setTimeout(fetchLogs, 500);
+            // Staggered refetches: first try after DB write, second as safety net
+            setTimeout(fetchLogs, 1000);
+            setTimeout(fetchLogs, 3000);
         };
         window.addEventListener('optimistic-update', handleOptimisticUpdate);
 

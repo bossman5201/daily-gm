@@ -25,7 +25,7 @@ export function HeatMap() {
         const fetchGmDays = async () => {
             setIsLoading(true);
             try {
-                const res = await fetch(`/api/stats?type=heatmap&address=${address}`);
+                const res = await fetch(`/api/stats?type=heatmap&address=${address}&t=${Date.now()}`, { cache: 'no-store' });
                 if (!res.ok) throw new Error('Fetch failed');
                 const data = await res.json();
 
@@ -50,6 +50,15 @@ export function HeatMap() {
         };
 
         fetchGmDays();
+
+        const handleOptimisticUpdate = () => {
+            setTimeout(fetchGmDays, 1000);
+        };
+        window.addEventListener('optimistic-update', handleOptimisticUpdate);
+
+        return () => {
+            window.removeEventListener('optimistic-update', handleOptimisticUpdate);
+        };
     }, [address, isConnected]);
 
     if (!isConnected || !address) return null;
