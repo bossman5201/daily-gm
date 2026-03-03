@@ -4,6 +4,7 @@ import * as React from 'react';
 import { useReadContract } from 'wagmi';
 import { CONTRACT_ADDRESS, DAILY_GM_ABI } from '../../config/contracts';
 import { motion, useSpring, useTransform } from 'framer-motion';
+import { useGMContext } from '../context/GMContext';
 
 function AnimatedNumber({ value }: { value: number }) {
     const spring = useSpring(0, { bounce: 0, duration: 2000 });
@@ -25,6 +26,7 @@ export function GlobalStats() {
 
     const [todayCount, setTodayCount] = React.useState(0);
     const [pulse, setPulse] = React.useState(false);
+    const { optimisticGM } = useGMContext();
 
     React.useEffect(() => {
         // Get start of today (UTC)
@@ -71,7 +73,8 @@ export function GlobalStats() {
         };
     }, []);
 
-    const count = Number(totalGMCount ?? 0);
+    const count = Number(totalGMCount ?? 0) + (optimisticGM ? 1 : 0);
+    const displayTodayCount = todayCount + (optimisticGM ? 1 : 0);
 
     return (
         <div className="w-full max-w-md text-center py-6">
@@ -87,7 +90,7 @@ export function GlobalStats() {
                     <div className={`w-2 h-2 rounded-full transition-all duration-300 ${pulse ? 'bg-green-400 shadow-[0_0_10px_#4ade80] scale-125' : 'bg-green-500/50'}`} />
                     <span className="text-white/40 text-sm font-medium tracking-wide uppercase">Today</span>
                     <span className="text-2xl font-black text-[#0052FF] tabular-nums">
-                        <AnimatedNumber value={todayCount} />
+                        <AnimatedNumber value={displayTodayCount} />
                     </span>
                 </div>
                 <span className="text-lg">☀️</span>

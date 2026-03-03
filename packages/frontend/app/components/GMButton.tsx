@@ -14,9 +14,11 @@ import { motion, useAnimation } from "framer-motion";
 import { CONTRACT_ADDRESS, DAILY_GM_ABI } from '../../config/contracts';
 import { parseError } from '../../lib/error';
 import { sdk } from '@farcaster/miniapp-sdk';
+import { useGMContext } from '../context/GMContext';
 
 export function GMButton() {
     const { address, isConnected, chainId } = useAccount();
+    const { triggerOptimisticUpdate } = useGMContext();
     const { writeContracts, data: callId, isPending, error } = useWriteContracts({
         mutation: {
             onSuccess: () => {
@@ -133,18 +135,19 @@ export function GMButton() {
 
     React.useEffect(() => {
         if (isSuccess) {
+            // INSTANT: Update ALL UI components via React Context — zero network delay
+            if (address) {
+                triggerOptimisticUpdate(address, hash || '');
+            }
+
+            // BACKGROUND: Sync with server (UI already updated, user doesn't wait for this)
             if (hash && address) {
                 fetch('/api/optimistic-gm', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ address, txHash: hash })
                 }).then(() => {
-                    // Dispatch a global event to instantly refresh all components
-                    // Give the DB write 800ms to fully commit before notifying listeners
-                    setTimeout(() => {
-                        window.dispatchEvent(new Event('optimistic-update'));
-                    }, 800);
-                    // Trigger real background indexing immediately
+                    window.dispatchEvent(new Event('optimistic-update'));
                     fetch('/api/trigger-index', { method: 'POST' }).catch(console.error);
                 }).catch(console.error);
             }
@@ -159,12 +162,11 @@ export function GMButton() {
                     particleCount: 150,
                     spread: 70,
                     origin: { y: 0.6 },
-                    colors: ['#0052FF', '#FFFFFF', '#000000'] // Base Brand Colors
+                    colors: ['#0052FF', '#FFFFFF', '#000000']
                 });
             });
-
         }
-    }, [isSuccess, refetch, hash, address]);
+    }, [isSuccess, refetch, hash, address, triggerOptimisticUpdate]);
 
     const isWrongChain = isConnected && chainId !== base.id;
 

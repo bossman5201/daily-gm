@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { useAccount } from 'wagmi';
+import { useGMContext } from '../context/GMContext';
 
 interface GMEvent {
     user_address: string;
@@ -18,6 +19,7 @@ export function LiveFeed() {
     const [isLoading, setIsLoading] = React.useState(true);
     const [isMounted, setIsMounted] = React.useState(false);
     const [isError, setIsError] = React.useState(false);
+    const { optimisticGM } = useGMContext();
 
     const fetchLogs = async () => {
         try {
@@ -89,8 +91,20 @@ export function LiveFeed() {
                         <div className="w-2 h-2 rounded-full bg-white/20" />
                         <span className="text-xs">Waiting for the first GM...</span>
                     </div>
-                ) : (
-                    events.map((event) => {
+                ) : (() => {
+                    // Merge optimistic entry at the top if available and not already in the list
+                    const displayEvents = optimisticGM && !events.some(e => e.tx_hash === optimisticGM.txHash)
+                        ? [{
+                            user_address: optimisticGM.address,
+                            tx_hash: optimisticGM.txHash || `optimistic-${optimisticGM.timestamp}`,
+                            streak: 0, // Will be corrected by server
+                            block_timestamp: optimisticGM.timestamp,
+                            farcaster_username: null,
+                            farcaster_pfp_url: null,
+                        }, ...events]
+                        : events;
+
+                    return displayEvents.map((event) => {
                         const isYou = address && event.user_address.toLowerCase() === address.toLowerCase();
                         return (
                             <div key={event.tx_hash} className={`flex justify-between items-center text-sm p-3 rounded-xl border transition-all duration-300 animate-in slide-in-from-right-8 fade-in duration-500 ${isYou
@@ -124,7 +138,7 @@ export function LiveFeed() {
                             </div>
                         );
                     })
-                )}
+                })()}
             </div>
         </div >
     );

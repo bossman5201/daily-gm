@@ -1,8 +1,10 @@
 'use client';
 
 import * as React from 'react';
+import { useAccount } from 'wagmi';
 import { Trophy } from 'lucide-react';
 import { getRank } from '../../lib/ranks';
+import { useGMContext } from '../context/GMContext';
 
 interface LeaderboardEntry {
     address: string;
@@ -15,6 +17,8 @@ interface LeaderboardEntry {
 export function Leaderboard() {
     const [leaders, setLeaders] = React.useState<LeaderboardEntry[]>([]);
     const [isLoading, setIsLoading] = React.useState(true);
+    const { optimisticGM } = useGMContext();
+    const { address } = useAccount();
 
     const fetchLeaderboard = async () => {
         try {

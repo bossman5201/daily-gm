@@ -11,6 +11,7 @@ import { CONTRACT_ADDRESS, DAILY_GM_ABI } from '../../config/contracts';
 import { parseError } from '../../lib/error';
 import { getRank } from '../../lib/ranks';
 import { getAchievements } from '../../lib/achievements';
+import { useGMContext } from '../context/GMContext';
 
 function NumberTicker({ value }: { value: number }) {
     const spring = useSpring(0, { bounce: 0, duration: 2000 });
@@ -114,11 +115,13 @@ export function PersonalStats() {
     if (!isMounted || !isConnected || !address) return null;
 
     const userStatsData = stats?.[0]?.result as [number, number, number, number, number] | undefined;
+    const { optimisticGM } = useGMContext();
+    const hasOptimistic = !!optimisticGM;
 
     // The tuple returns [lastGMTime, currentStreak, totalGMs, longestStreak, brokenStreak]
-    const totalGMs = userStatsData ? Number(userStatsData[2]) : null;
-    const longestStreak = userStatsData ? Number(userStatsData[3]) : null;
-    const currentStreak = userStatsData ? Number(userStatsData[1]) : 0;
+    const totalGMs = userStatsData ? Number(userStatsData[2]) + (hasOptimistic ? 1 : 0) : (hasOptimistic ? 1 : null);
+    const currentStreak = userStatsData ? Number(userStatsData[1]) + (hasOptimistic ? 1 : 0) : (hasOptimistic ? 1 : 0);
+    const longestStreak = userStatsData ? Math.max(Number(userStatsData[3]), currentStreak) : (hasOptimistic ? 1 : null);
     const brokenStreak = userStatsData ? Number(userStatsData[4]) : 0;
     const rank = getRank(currentStreak);
     const achievements = getAchievements({

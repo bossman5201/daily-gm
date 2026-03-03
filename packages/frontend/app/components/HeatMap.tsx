@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { useAccount } from 'wagmi';
 import { Calendar } from 'lucide-react';
+import { useGMContext } from '../context/GMContext';
 
 /**
  * GitHub-style heat map showing GM activity.
@@ -18,6 +19,7 @@ export function HeatMap() {
     const [gmDays, setGmDays] = React.useState<Set<string>>(new Set());
     const [firstGmDate, setFirstGmDate] = React.useState<Date | null>(null);
     const [isLoading, setIsLoading] = React.useState(true);
+    const { optimisticGM } = useGMContext();
 
     React.useEffect(() => {
         if (!address || !isConnected) return;
@@ -84,8 +86,15 @@ export function HeatMap() {
     }
 
     const getColor = (dateStr: string, date: Date) => {
-        if (gmDays.has(dateStr)) return 'bg-[#0052FF]'; // Blue = GM'd
-        if (!firstGmDate || date < firstGmDate) return 'bg-white/5'; // Before first GM
+        const optimisticDateStr = optimisticGM
+            ? new Date(optimisticGM.timestamp * 1000).getFullYear() + '-' + String(new Date(optimisticGM.timestamp * 1000).getMonth() + 1).padStart(2, '0') + '-' + String(new Date(optimisticGM.timestamp * 1000).getDate()).padStart(2, '0')
+            : null;
+
+        if (gmDays.has(dateStr) || dateStr === optimisticDateStr) return 'bg-[#0052FF]'; // Blue = GM'd
+
+        const effectiveFirstGm = firstGmDate || (optimisticGM ? new Date(optimisticGM.timestamp * 1000) : null);
+        if (!effectiveFirstGm || date < effectiveFirstGm) return 'bg-white/5'; // Before first GM
+
         if (date > today) return 'bg-white/5'; // Future
         return 'bg-red-500/40'; // Red = missed
     };
