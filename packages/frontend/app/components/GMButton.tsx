@@ -135,6 +135,7 @@ export function GMButton() {
 
     React.useEffect(() => {
         if (isSuccess) {
+            console.log('[GMButton] isSuccess effect FIRED', { address, hash, isSuccess });
             // INSTANT: Update ALL UI components via React Context — zero network delay
             if (address) {
                 triggerOptimisticUpdate(address, hash || '');

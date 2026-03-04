@@ -28,6 +28,7 @@ export function PersonalStats() {
     const { address, isConnected, chainId } = useAccount();
     const { switchChain } = useSwitchChain();
     const [isMounted, setIsMounted] = React.useState(false);
+    const { optimisticGM } = useGMContext();
 
     React.useEffect(() => {
         setIsMounted(true);
@@ -115,7 +116,6 @@ export function PersonalStats() {
     if (!isMounted || !isConnected || !address) return null;
 
     const userStatsData = stats?.[0]?.result as [number, number, number, number, number] | undefined;
-    const { optimisticGM } = useGMContext();
     const hasOptimistic = !!optimisticGM;
 
     // The tuple returns [lastGMTime, currentStreak, totalGMs, longestStreak, brokenStreak]

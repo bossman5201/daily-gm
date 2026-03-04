@@ -27,6 +27,7 @@ export function GMProvider({ children }: { children: React.ReactNode }) {
 
     const triggerOptimisticUpdate = React.useCallback((address: string, txHash: string) => {
         const now = Math.floor(Date.now() / 1000);
+        console.log('[GMContext] triggerOptimisticUpdate FIRED', { address: address.slice(0, 10), txHash: txHash.slice(0, 10), timestamp: now });
         setOptimisticGM({ address, txHash, timestamp: now });
 
         // Auto-clear after 15 seconds — by then server data is authoritative
