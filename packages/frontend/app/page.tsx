@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useCallback } from 'react';
-import { useAccount } from 'wagmi';
 import { GMButton } from './components/GMButton';
 import { Header } from './components/Header';
 import { LiveFeed } from './components/LiveFeed';
@@ -11,29 +10,7 @@ import { GlobalStats } from './components/GlobalStats';
 import { AdminPanel } from './components/AdminPanel';
 import { HeatMap } from './components/HeatMap';
 import { OnboardingModal } from './components/OnboardingModal';
-import { GMProvider, useGMContext } from './context/GMContext';
-
-function DebugTestButton() {
-  const { address } = useAccount();
-  const { triggerOptimisticUpdate, optimisticGM } = useGMContext();
-
-  return (
-    <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
-      <button
-        onClick={() => {
-          const testAddr = address || '0x1234567890abcdef1234567890abcdef12345678';
-          triggerOptimisticUpdate(testAddr, '0xFAKE_TEST_HASH_' + Date.now());
-        }}
-        className="bg-red-600 text-white text-xs px-4 py-2 rounded-full font-bold shadow-lg hover:bg-red-500"
-      >
-        🧪 TEST: Trigger Optimistic Update
-      </button>
-      <div className="text-[10px] text-white/60 bg-black/80 px-3 py-1 rounded-full text-center">
-        State: {optimisticGM ? '✅ ACTIVE' : '❌ NULL'}
-      </div>
-    </div>
-  );
-}
+import { GMProvider } from './context/GMContext';
 
 export default function Home() {
   // Signal to the Base App that the mini app is ready
@@ -88,7 +65,6 @@ export default function Home() {
           </div>
         </div>
         <AdminPanel />
-        <DebugTestButton />
       </main>
     </GMProvider>
   );

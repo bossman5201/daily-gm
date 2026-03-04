@@ -135,8 +135,6 @@ export function GMButton() {
 
     React.useEffect(() => {
         if (isSuccess) {
-            console.log('[GMButton] isSuccess effect FIRED', { address, hash, isSuccess });
-            toast.info(`🔍 isSuccess fired! hash=${hash ? 'YES' : 'NO'} addr=${address ? 'YES' : 'NO'}`, { duration: 5000, id: 'debug-success' });
             // INSTANT: Update ALL UI components via React Context — zero network delay
             if (address) {
                 triggerOptimisticUpdate(address, hash || '');

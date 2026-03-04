@@ -1,7 +1,6 @@
 'use client';
 
 import * as React from 'react';
-import { toast } from 'sonner';
 
 interface OptimisticGM {
     address: string;
@@ -29,11 +28,9 @@ export function GMProvider({ children }: { children: React.ReactNode }) {
 
     const triggerOptimisticUpdate = React.useCallback((address: string, txHash: string) => {
         const now = Math.floor(Date.now() / 1000);
-        console.log('[GMContext] triggerOptimisticUpdate FIRED', { address: address.slice(0, 10), txHash: txHash.slice(0, 10), timestamp: now });
-        toast.success('⚡ UI updating instantly!', { duration: 3000, id: 'optimistic-debug' });
         setOptimisticGM({ address, txHash, timestamp: now });
 
-        // Clear any existing timer before setting a new one 
+        // Clear any existing timer before setting a new one (prevents stacking timers on repeated calls)
         if (clearTimerRef.current) {
             clearTimeout(clearTimerRef.current);
         }
