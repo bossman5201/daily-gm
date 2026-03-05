@@ -29,6 +29,8 @@ export function GMButton() {
                 const cleanMessage = parseError(err);
                 toast.dismiss();
                 toast.error(cleanMessage);
+                // Transaction failed — clear pendingGM so fallback stops polling
+                pendingGMRef.current = false;
             }
         }
     });
@@ -56,7 +58,15 @@ export function GMButton() {
         functionName: 'protocolFee',
     });
 
-    // Read the last GM time for this user
+    // ─────────────────────────────────────────────────────────────────────────────
+    // DUAL-TRIGGER: Track pending GM and watch blockchain for confirmation
+    // ─────────────────────────────────────────────────────────────────────────────
+    const pendingGMRef = React.useRef(false);
+    const previousLastGMTimeRef = React.useRef<bigint | number | null>(null);
+    const hasTriggeredUpdateRef = React.useRef(false);
+    const [pendingGMState, setPendingGMState] = React.useState(false); // For triggering fast polling
+
+    // Read the last GM time for this user — with fast polling when a GM is pending
     const { data: userStats, refetch } = useReadContract({
         address: CONTRACT_ADDRESS,
         abi: DAILY_GM_ABI,
@@ -64,10 +74,102 @@ export function GMButton() {
         args: [address as `0x${string}`],
         query: {
             enabled: !!address,
+            // Fast polling (every 2s) when a GM is pending, otherwise no auto-poll
+            refetchInterval: pendingGMState ? 2000 : false,
         }
     });
 
     const lastGMTime = userStats ? (userStats as [bigint | number, unknown, unknown, unknown, unknown])[0] : null;
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Shared function: fire optimistic update + background server sync
+    // Called by BOTH the primary (isSuccess) and fallback (lastGMTime change) paths
+    // ─────────────────────────────────────────────────────────────────────────────
+    const fireOptimisticAndSync = React.useCallback((txHashValue: string) => {
+        if (hasTriggeredUpdateRef.current) return; // Prevent double-fire
+        hasTriggeredUpdateRef.current = true;
+        pendingGMRef.current = false;
+        setPendingGMState(false);
+
+        // 1. INSTANT: Update all UI components via React Context
+        if (address) {
+            triggerOptimisticUpdate(address, txHashValue);
+        }
+
+        // 2. BACKGROUND: Sync with server (UI already updated, user doesn't wait)
+        if (address) {
+            fetch('/api/optimistic-gm', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ address, txHash: txHashValue })
+            }).then(() => {
+                window.dispatchEvent(new Event('optimistic-update'));
+                fetch('/api/trigger-index', { method: 'POST' }).catch(console.error);
+            }).catch(console.error);
+        }
+
+        // 3. Staggered refetches for the cooldown timer
+        setTimeout(() => refetch(), 1000);
+        setTimeout(() => refetch(), 3000);
+        setTimeout(() => refetch(), 5000);
+
+        // 4. Confetti!
+        import('canvas-confetti').then((confetti) => {
+            confetti.default({
+                particleCount: 150,
+                spread: 70,
+                origin: { y: 0.6 },
+                colors: ['#0052FF', '#FFFFFF', '#000000']
+            });
+        });
+    }, [address, triggerOptimisticUpdate, refetch]);
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // PRIMARY TRIGGER: isSuccess from useCallsStatus (if it fires)
+    // ─────────────────────────────────────────────────────────────────────────────
+    React.useEffect(() => {
+        if (isSuccess && !hasTriggeredUpdateRef.current) {
+            fireOptimisticAndSync(hash || '');
+        }
+    }, [isSuccess, hash, fireOptimisticAndSync]);
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // FALLBACK TRIGGER: Watch lastGMTime for changes (blockchain confirms the GM)
+    // This fires even if useCallsStatus never returns CONFIRMED
+    // ─────────────────────────────────────────────────────────────────────────────
+    React.useEffect(() => {
+        if (lastGMTime === null || lastGMTime === undefined) return;
+
+        const currentTime = BigInt(lastGMTime as any);
+
+        // Initialize the previous value on first load
+        if (previousLastGMTimeRef.current === null) {
+            previousLastGMTimeRef.current = currentTime;
+            return;
+        }
+
+        const previousTime = BigInt(previousLastGMTimeRef.current as any);
+
+        // If lastGMTime changed AND we have a pending GM, the blockchain confirmed it!
+        if (currentTime > previousTime && pendingGMRef.current && !hasTriggeredUpdateRef.current) {
+            fireOptimisticAndSync(''); // No hash available from this path
+        }
+
+        // Always update the ref to track the latest value
+        previousLastGMTimeRef.current = currentTime;
+    }, [lastGMTime, fireOptimisticAndSync]);
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Safety timeout: Stop fast polling after 90 seconds if nothing happened
+    // ─────────────────────────────────────────────────────────────────────────────
+    React.useEffect(() => {
+        if (!pendingGMState) return;
+        const timeout = setTimeout(() => {
+            pendingGMRef.current = false;
+            setPendingGMState(false);
+        }, 90000);
+        return () => clearTimeout(timeout);
+    }, [pendingGMState]);
 
     const [timeLeft, setTimeLeft] = React.useState<string | null>(null);
     const [isLapsed, setIsLapsed] = React.useState(false);
@@ -133,42 +235,8 @@ export function GMButton() {
         return () => clearInterval(interval);
     }, [lastGMTime]);
 
-    React.useEffect(() => {
-        if (isSuccess) {
-            // INSTANT: Update ALL UI components via React Context — zero network delay
-            if (address) {
-                triggerOptimisticUpdate(address, hash || '');
-            }
-
-            // BACKGROUND: Sync with server (UI already updated, user doesn't wait for this)
-            if (hash && address) {
-                fetch('/api/optimistic-gm', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ address, txHash: hash })
-                }).then(() => {
-                    window.dispatchEvent(new Event('optimistic-update'));
-                    fetch('/api/trigger-index', { method: 'POST' }).catch(console.error);
-                }).catch(console.error);
-            }
-
-            // Staggered refetches for the cooldown timer (reads from blockchain RPC)
-            setTimeout(() => refetch(), 1000);
-            setTimeout(() => refetch(), 3000);
-            setTimeout(() => refetch(), 5000);
-
-            import('canvas-confetti').then((confetti) => {
-                confetti.default({
-                    particleCount: 150,
-                    spread: 70,
-                    origin: { y: 0.6 },
-                    colors: ['#0052FF', '#FFFFFF', '#000000']
-                });
-            });
-        }
-    }, [isSuccess, refetch, hash, address, triggerOptimisticUpdate]);
-
     const isWrongChain = isConnected && chainId !== base.id;
+    const gmConfirmed = isSuccess || hasTriggeredUpdateRef.current;
 
     const handleGM = () => {
         if (isWrongChain) {
@@ -199,7 +267,13 @@ export function GMButton() {
         };
         fetchAndSaveProfile();
 
-        // 1. Send the transaction using useWriteContracts to explicitly request CDP Paymaster sponsorship
+        // Mark pending GM BEFORE sending the transaction —
+        // this starts fast blockchain polling to detect confirmation
+        pendingGMRef.current = true;
+        hasTriggeredUpdateRef.current = false;
+        setPendingGMState(true);
+
+        // Send the transaction using useWriteContracts to explicitly request CDP Paymaster sponsorship
         const paymasterUrl = process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY
             ? `https://api.developer.coinbase.com/rpc/v1/base/${process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY}`
             : '';
@@ -254,7 +328,7 @@ export function GMButton() {
 
     return (
         <div className="flex flex-col items-center gap-4">
-            {isLapsed && !isSuccess && (
+            {isLapsed && !gmConfirmed && (
                 <div className="absolute top-1/2 -translate-y-48 z-20 text-center text-xs sm:text-sm font-semibold text-orange-400 bg-orange-400/10 border border-orange-400/20 px-6 py-3 rounded-full shadow-[0_0_30px_-5px_orange] w-max max-w-[90vw] pointer-events-none">
                     ⚠️ Streak lapsed! GM now to unlock Restore.
                 </div>
@@ -322,8 +396,8 @@ export function GMButton() {
             </motion.div>
 
             {hash && <div className="text-xs text-gray-500">Tx: {hash.slice(0, 6)}...{hash.slice(-4)}</div>}
-            {isSuccess && <div className="text-green-500 font-bold">GM Sent! Streak Updated!</div>}
-            {isSuccess && (
+            {gmConfirmed && <div className="text-green-500 font-bold">GM Sent! Streak Updated!</div>}
+            {gmConfirmed && (
                 <button
                     onClick={handleShare}
                     className="text-sm font-bold text-[#0052FF] hover:text-white transition-colors mt-1"
