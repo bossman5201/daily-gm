@@ -431,13 +431,19 @@ export function GMButton() {
             {/* TEMPORARY TEST BUTTON — remove after verifying fallback works */}
             <button
                 onClick={() => {
-                    // Simulate the fallback by pretending lastGMTime just changed
-                    previousLastGMTimeRef.current = BigInt(0);
-                    pendingGMRef.current = true;
-                    hasTriggeredUpdateRef.current = false;
-                    setPendingGMState(true);
-                    toast.info('🧪 Test: Fallback trigger armed! Polling blockchain...', { duration: 3000 });
-                    // The next refetchInterval poll (2s) will see lastGMTime > 0 and fire
+                    if (address && lastGMTime) {
+                        // Wallet connected: test the blockchain-polling fallback
+                        previousLastGMTimeRef.current = BigInt(0);
+                        pendingGMRef.current = true;
+                        hasTriggeredUpdateRef.current = false;
+                        setPendingGMState(true);
+                        toast.info('🧪 Wallet detected — testing blockchain polling fallback...', { duration: 3000 });
+                    } else {
+                        // No wallet: directly test fireOptimisticAndSync with fake data
+                        hasTriggeredUpdateRef.current = false;
+                        fireOptimisticAndSync('0xTEST_FALLBACK_' + Date.now());
+                        toast.info('🧪 No wallet — directly fired optimistic update!', { duration: 3000 });
+                    }
                 }}
                 className="fixed bottom-4 right-4 z-50 bg-red-600 text-white text-xs px-4 py-2 rounded-full font-bold shadow-lg hover:bg-red-500"
             >
