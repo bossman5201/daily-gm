@@ -66,6 +66,20 @@ export function GMButton() {
     const hasTriggeredUpdateRef = React.useRef(false);
     const [pendingGMState, setPendingGMState] = React.useState(false); // For triggering fast polling
 
+    // Resume pending GM from sessionStorage (survives page reloads during wallet flow)
+    React.useEffect(() => {
+        try {
+            const saved = sessionStorage.getItem('pendingGM');
+            if (saved === 'true') {
+                pendingGMRef.current = true;
+                hasTriggeredUpdateRef.current = false;
+                setPendingGMState(true);
+            }
+        } catch {
+            // sessionStorage not available — safe to ignore
+        }
+    }, []);
+
     // Read the last GM time for this user — with fast polling when a GM is pending
     const { data: userStats, refetch } = useReadContract({
         address: CONTRACT_ADDRESS,
@@ -90,6 +104,7 @@ export function GMButton() {
         hasTriggeredUpdateRef.current = true;
         pendingGMRef.current = false;
         setPendingGMState(false);
+        try { sessionStorage.removeItem('pendingGM'); } catch { /* safe to ignore */ }
 
         // 1. INSTANT: Update all UI components via React Context
         if (address) {
@@ -272,6 +287,7 @@ export function GMButton() {
         pendingGMRef.current = true;
         hasTriggeredUpdateRef.current = false;
         setPendingGMState(true);
+        try { sessionStorage.setItem('pendingGM', 'true'); } catch { /* safe to ignore */ }
 
         // Send the transaction using useWriteContracts to explicitly request CDP Paymaster sponsorship
         const paymasterUrl = process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY
@@ -412,6 +428,21 @@ export function GMButton() {
                     </div>
                 )
             }
+            {/* TEMPORARY TEST BUTTON — remove after verifying fallback works */}
+            <button
+                onClick={() => {
+                    // Simulate the fallback by pretending lastGMTime just changed
+                    previousLastGMTimeRef.current = BigInt(0);
+                    pendingGMRef.current = true;
+                    hasTriggeredUpdateRef.current = false;
+                    setPendingGMState(true);
+                    toast.info('🧪 Test: Fallback trigger armed! Polling blockchain...', { duration: 3000 });
+                    // The next refetchInterval poll (2s) will see lastGMTime > 0 and fire
+                }}
+                className="fixed bottom-4 right-4 z-50 bg-red-600 text-white text-xs px-4 py-2 rounded-full font-bold shadow-lg hover:bg-red-500"
+            >
+                🧪 TEST FALLBACK TRIGGER
+            </button>
         </div >
     );
 }
