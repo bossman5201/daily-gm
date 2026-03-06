@@ -40,20 +40,11 @@ export function LiveFeed() {
         setIsMounted(true);
         fetchLogs();
 
-        // Since we removed Supabase, we fall back to short-polling 
-        // every 15 seconds to simulate a live feed.
+        // Poll every 15 seconds to keep the feed fresh
         const interval = setInterval(fetchLogs, 15000);
-
-        const handleOptimisticUpdate = () => {
-            // Staggered refetches: first try after DB write, second as safety net
-            setTimeout(fetchLogs, 1000);
-            setTimeout(fetchLogs, 3000);
-        };
-        window.addEventListener('optimistic-update', handleOptimisticUpdate);
 
         return () => {
             clearInterval(interval);
-            window.removeEventListener('optimistic-update', handleOptimisticUpdate);
         };
     }, []);
 

@@ -55,21 +55,11 @@ export function GlobalStats() {
 
         fetchToday();
 
-        // Polling fallback since we removed Supabase WebSockets
+        // Poll every 30 seconds to keep the count fresh
         const interval = setInterval(fetchToday, 30000);
-
-        const handleOptimisticUpdate = () => {
-            // Refetch today count from DB (fast)
-            setTimeout(fetchToday, 1000);
-            // Refetch total from blockchain RPC (needs block processing time)
-            setTimeout(() => refetchTotal(), 3000);
-            setTimeout(() => refetchTotal(), 5000);
-        };
-        window.addEventListener('optimistic-update', handleOptimisticUpdate);
 
         return () => {
             clearInterval(interval);
-            window.removeEventListener('optimistic-update', handleOptimisticUpdate);
         };
     }, []);
 
