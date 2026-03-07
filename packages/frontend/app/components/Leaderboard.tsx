@@ -37,19 +37,11 @@ export function Leaderboard() {
     React.useEffect(() => {
         fetchLeaderboard();
 
-        // Fall back to polling since Supabase WebSockets are gone
+        // Poll every 30 seconds to keep rankings fresh
         const interval = setInterval(fetchLeaderboard, 30000);
-
-        const handleOptimisticUpdate = () => {
-            // Staggered refetches: first try after DB write, second as safety net
-            setTimeout(fetchLeaderboard, 1000);
-            setTimeout(fetchLeaderboard, 3000);
-        };
-        window.addEventListener('optimistic-update', handleOptimisticUpdate);
 
         return () => {
             clearInterval(interval);
-            window.removeEventListener('optimistic-update', handleOptimisticUpdate);
         };
     }, []);
 

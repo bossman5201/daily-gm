@@ -83,19 +83,6 @@ export function PersonalStats() {
         }
     }, [isConfirmed, refetch]);
 
-    React.useEffect(() => {
-        const handleOptimisticUpdate = () => {
-            // Staggered refetches to give the Base RPC node time to process the new block
-            setTimeout(() => refetch(), 1000);
-            setTimeout(() => refetch(), 3000);
-            setTimeout(() => refetch(), 5000);
-        };
-        window.addEventListener('optimistic-update', handleOptimisticUpdate);
-
-        return () => {
-            window.removeEventListener('optimistic-update', handleOptimisticUpdate);
-        };
-    }, [refetch]);
 
     const handleRestore = () => {
         if (!restoreFee) return;
@@ -202,7 +189,7 @@ export function PersonalStats() {
                 <div className="relative z-10 p-4 bg-red-500/10 rounded-xl border border-red-500/20 flex flex-col items-center text-center">
                     <div className="flex items-center gap-2 mb-2">
                         <Shield className="w-5 h-5 text-red-500" />
-                        <h3 className="text-md font-bold text-red-100">Streak Broker!</h3>
+                        <h3 className="text-md font-bold text-red-100">Streak Broken!</h3>
                     </div>
                     <p className="text-sm text-red-200/70 mb-4">
                         You lost a streak of <span className="font-bold text-white">{brokenStreak} days</span>.

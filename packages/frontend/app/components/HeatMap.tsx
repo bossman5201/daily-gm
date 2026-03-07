@@ -52,15 +52,6 @@ export function HeatMap() {
         };
 
         fetchGmDays();
-
-        const handleOptimisticUpdate = () => {
-            setTimeout(fetchGmDays, 1000);
-        };
-        window.addEventListener('optimistic-update', handleOptimisticUpdate);
-
-        return () => {
-            window.removeEventListener('optimistic-update', handleOptimisticUpdate);
-        };
     }, [address, isConnected]);
 
     if (!isConnected || !address) return null;
@@ -95,7 +86,7 @@ export function HeatMap() {
         const effectiveFirstGm = firstGmDate || (optimisticGM ? new Date(optimisticGM.timestamp * 1000) : null);
         if (!effectiveFirstGm || date < effectiveFirstGm) return 'bg-white/5'; // Before first GM
 
-        if (date > today) return 'bg-white/5'; // Future
+        if (date >= today) return 'bg-white/5'; // Today or future — not yet missed
         return 'bg-red-500/40'; // Red = missed
     };
 

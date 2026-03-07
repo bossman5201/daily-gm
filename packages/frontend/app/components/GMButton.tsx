@@ -7,7 +7,7 @@ import { parseEther } from 'viem';
 import { base } from 'wagmi/chains';
 
 
-import { Button } from '@/components/ui/button';
+
 import { Loader2, Timer } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, useAnimation } from "framer-motion";
@@ -111,19 +111,22 @@ export function GMButton() {
             triggerOptimisticUpdate(address, txHashValue);
         }
 
-        // 2. BACKGROUND: Sync with server (UI already updated via Context, user doesn't wait)
+        // 2. BACKGROUND: Sync with server (UI already updated, user doesn't wait)
         if (address) {
             fetch('/api/optimistic-gm', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ address, txHash: txHashValue })
             }).then(() => {
+                window.dispatchEvent(new Event('optimistic-update'));
                 fetch('/api/trigger-index', { method: 'POST' }).catch(console.error);
             }).catch(console.error);
         }
 
-        // 3. Single delayed refetch for accurate cooldown timer (not for UI — Context handles that)
-        setTimeout(() => refetch(), 8000);
+        // 3. Staggered refetches for the cooldown timer
+        setTimeout(() => refetch(), 1000);
+        setTimeout(() => refetch(), 3000);
+        setTimeout(() => refetch(), 5000);
 
         // 4. Confetti!
         import('canvas-confetti').then((confetti) => {

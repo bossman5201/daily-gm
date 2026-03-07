@@ -34,6 +34,12 @@ export async function POST(request: Request) {
         }
 
         const nowSeconds = Math.floor(Date.now() / 1000);
+
+        // Guard: Reject if within 20-hour cooldown (prevents double-fire from fallback)
+        if (lastGmSeconds > 0 && (nowSeconds - lastGmSeconds) < 20 * 3600) {
+            return NextResponse.json({ success: false, reason: 'cooldown' }, { status: 429 });
+        }
+
         let newStreak = 1;
 
         if (lastGmSeconds > 0) {

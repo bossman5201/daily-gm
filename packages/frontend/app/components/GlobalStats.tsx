@@ -29,9 +29,6 @@ export function GlobalStats() {
     const { optimisticGM } = useGMContext();
 
     React.useEffect(() => {
-        // Get start of today (UTC)
-        const now = new Date();
-        const todayStart = Math.floor(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).getTime() / 1000);
 
         const fetchToday = async () => {
             try {

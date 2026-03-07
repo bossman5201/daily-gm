@@ -35,11 +35,11 @@ export function GMProvider({ children }: { children: React.ReactNode }) {
             clearTimeout(clearTimerRef.current);
         }
 
-        // Auto-clear after 15 seconds — by then server data is authoritative
+        // Auto-clear after 35 seconds — safely past the 30s polling interval so server data arrives first
         clearTimerRef.current = setTimeout(() => {
             setOptimisticGM(null);
             clearTimerRef.current = null;
-        }, 15000);
+        }, 35000);
     }, []);
 
     return (

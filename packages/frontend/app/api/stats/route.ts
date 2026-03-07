@@ -30,7 +30,7 @@ export async function GET(request: Request) {
                 SELECT address, current_streak, longest_streak, total_gms, last_gm,
                        farcaster_username, farcaster_pfp_url
                 FROM public.users
-                ORDER BY longest_streak DESC, total_gms DESC
+                ORDER BY current_streak DESC, total_gms DESC
                 LIMIT 50;
             `;
             return NextResponse.json(users);
