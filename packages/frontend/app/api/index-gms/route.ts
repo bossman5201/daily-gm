@@ -20,7 +20,7 @@ const MILESTONE_EVENT = parseAbiItem('event Milestone(address indexed user, uint
 const REFERRED_EVENT = parseAbiItem('event Referred(address indexed user, address indexed referredBy)');
 
 export async function GET(request: Request) {
-    // Initialize Viem Client inside handler to prevent top-level Vercel runtime crashes
+    return NextResponse.json({ status: "alive" });
     const client = createPublicClient({
         chain: base,
         transport: http('https://base-rpc.publicnode.com')
