@@ -56,8 +56,8 @@ export async function GET(request: Request) {
         }
 
         // 3. Fetch logs from RPC in CHUNKS
-        // Increase chunk size to 50,000 blocks since publicnode can handle it
-        const CHUNK_SIZE = 50000n;
+        // Reduce chunk size to 5,000 blocks to prevent Vercel 10s Serverless timeout
+        const CHUNK_SIZE = 5000n;
         const allGmLogs: any[] = [];
         const allRestoreLogs: any[] = [];
         const allMilestoneLogs: any[] = [];
@@ -336,8 +336,12 @@ export async function GET(request: Request) {
             toBlock: Number(endBlock)
         });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('Indexer Error:', error);
-        return new NextResponse('Internal Server Error', { status: 500 });
+        return NextResponse.json({
+            error: 'Internal Server Error',
+            message: error.message,
+            stack: error.stack
+        }, { status: 500 });
     }
 }
