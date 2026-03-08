@@ -5,11 +5,6 @@ import { base } from 'viem/chains';
 import { CONTRACT_ADDRESS } from '../../../config/contracts';
 
 import { sql } from '@vercel/postgres';
-// Initialize Viem Client (uses public RPC to bypass strict Alchemy Free Tier block range limits)
-const client = createPublicClient({
-    chain: base,
-    transport: http('https://base-rpc.publicnode.com')
-});
 
 // ABI Events
 const DEPLOYMENT_BLOCK = BigInt(process.env.DEPLOYMENT_BLOCK || '0');
@@ -25,6 +20,12 @@ const MILESTONE_EVENT = parseAbiItem('event Milestone(address indexed user, uint
 const REFERRED_EVENT = parseAbiItem('event Referred(address indexed user, address indexed referredBy)');
 
 export async function GET(request: Request) {
+    // Initialize Viem Client inside handler to prevent top-level Vercel runtime crashes
+    const client = createPublicClient({
+        chain: base,
+        transport: http('https://base-rpc.publicnode.com')
+    });
+
     // 1. Secure the route (Cron Secret)
     const cronSecret = process.env.CRON_SECRET;
     const authHeader = request.headers.get('authorization');
